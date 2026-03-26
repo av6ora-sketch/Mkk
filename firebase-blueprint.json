@@ -1,0 +1,139 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "A user of the platform",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "The unique identifier of the user"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "The email address of the user"
+        },
+        "firstName": {
+          "type": "string",
+          "description": "The first name of the user"
+        },
+        "lastName": {
+          "type": "string",
+          "description": "The last name of the user"
+        },
+        "avatar": {
+          "type": "string",
+          "description": "The avatar URL of the user"
+        },
+        "phone": {
+          "type": "string",
+          "description": "The phone number of the user"
+        },
+        "country": {
+          "type": "string",
+          "description": "The country of the user"
+        },
+        "role": {
+          "type": "string",
+          "enum": ["user", "admin"],
+          "description": "The role of the user"
+        },
+        "plan": {
+          "type": "string",
+          "enum": ["الأساسية", "الاحترافية", "المؤسسات"],
+          "description": "The subscription plan of the user"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The creation date of the user"
+        }
+      },
+      "required": ["uid", "email", "role", "plan", "createdAt"]
+    },
+    "Store": {
+      "title": "Store",
+      "description": "A store connected by a user",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "The owner's user ID"
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the store"
+        },
+        "domain": {
+          "type": "string",
+          "description": "The domain of the store"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "active"],
+          "description": "The status of the store connection"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The creation date of the store"
+        }
+      },
+      "required": ["uid", "name", "domain", "status", "createdAt"]
+    },
+    "TrackingEvent": {
+      "title": "TrackingEvent",
+      "description": "An event tracked from a store",
+      "type": "object",
+      "properties": {
+        "storeId": {
+          "type": "string",
+          "description": "The ID of the store"
+        },
+        "ownerId": {
+          "type": "string",
+          "description": "The ID of the store owner"
+        },
+        "eventType": {
+          "type": "string",
+          "description": "The type of event (e.g., page_view, add_to_cart)"
+        },
+        "url": {
+          "type": "string",
+          "description": "The URL where the event occurred"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The time the event occurred"
+        },
+        "metadata": {
+          "type": "string",
+          "description": "Optional JSON string of additional data"
+        }
+      },
+      "required": ["storeId", "ownerId", "eventType", "url", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": {
+        "$ref": "#/entities/User"
+      },
+      "description": "The users collection"
+    },
+    "/stores/{storeId}": {
+      "schema": {
+        "$ref": "#/entities/Store"
+      },
+      "description": "The stores collection"
+    },
+    "/events/{eventId}": {
+      "schema": {
+        "$ref": "#/entities/TrackingEvent"
+      },
+      "description": "The tracking events collection"
+    }
+  }
+}

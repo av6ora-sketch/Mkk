@@ -1,0 +1,127 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {userId}
+    // Fields:
+    //   - uid: string (required) - User ID
+    //   - email: string (required) - User email
+    //   - firstName: string (optional) - User first name
+    //   - lastName: string (optional) - User last name
+    //   - role: string (required) - User role ('user', 'admin')
+    //   - plan: string (required) - User subscription plan ('الأساسية', 'الاحترافية', 'المؤسسات')
+    //   - createdAt: timestamp (required) - Creation date
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isDocOwner() {
+      return isAuthenticated() && request.auth.uid == resource.data.uid;
+    }
+    
+    function uidUnchanged() {
+      return !('uid' in request.resource.data) || request.resource.data.uid == request.auth.uid;
+    }
+    
+    function uidNotModified() {
+      return !('uid' in request.resource.data) || request.resource.data.uid == resource.data.uid;
+    }
+    
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+    
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+    
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() &&
+        (request.auth.token.email == "av6ora@gmail.com" ||
+         request.auth.token.email == "contact@avbora.online");
+    }
+    
+    function isValidUser(data) {
+      return hasOnlyAllowedFields(['uid', 'email', 'firstName', 'lastName', 'role', 'plan', 'createdAt', 'avatar', 'phone', 'country']) &&
+             data.uid is string && data.uid.size() > 0 && data.uid.size() < 100 &&
+             data.email is string && isValidEmail(data.email) && data.email.size() < 100 &&
+             (!('firstName' in data) || (data.firstName is string && data.firstName.size() <= 50)) &&
+             (!('lastName' in data) || (data.lastName is string && data.lastName.size() <= 50)) &&
+             (!('avatar' in data) || (data.avatar is string && data.avatar.size() <= 500)) &&
+             (!('phone' in data) || (data.phone is string && data.phone.size() <= 20)) &&
+             (!('country' in data) || (data.country is string && data.country.size() <= 50)) &&
+             data.role in ['user', 'admin'] &&
+             data.plan in ['الأساسية', 'الاحترافية', 'المؤسسات'] &&
+             (data.createdAt is timestamp || data.createdAt is string);
+    }
+
+    function isValidStore(data) {
+      return hasOnlyAllowedFields(['uid', 'name', 'domain', 'status', 'createdAt']) &&
+             data.uid is string && data.uid.size() > 0 && data.uid.size() < 100 &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.domain is string && data.domain.size() > 0 && data.domain.size() < 200 &&
+             data.status in ['pending', 'active'] &&
+             (data.createdAt is timestamp || data.createdAt is string);
+    }
+
+    function isValidEvent(data) {
+      return hasOnlyAllowedFields(['storeId', 'ownerId', 'eventType', 'url', 'timestamp', 'metadata']) &&
+             data.storeId is string && data.storeId.size() > 0 && data.storeId.size() < 100 &&
+             data.ownerId is string && data.ownerId.size() > 0 && data.ownerId.size() < 100 &&
+             data.eventType is string && data.eventType.size() > 0 && data.eventType.size() < 50 &&
+             data.url is string && data.url.size() > 0 && data.url.size() < 1000 &&
+             (data.timestamp is timestamp || data.timestamp is string) &&
+             (!('metadata' in data) || (data.metadata is string && data.metadata.size() < 5000));
+    }
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      
+      allow create: if isAuthenticated() && 
+                    isOwner(userId) &&
+                    isValidUser(request.resource.data) && 
+                    uidUnchanged() &&
+                    ((request.resource.data.role == 'user') || isAdmin());
+                    
+      allow update: if isAuthenticated() && 
+                    isValidUser(request.resource.data) && 
+                    uidNotModified() &&
+                    ((isOwner(userId) && request.resource.data.role == resource.data.role) || isAdmin());
+                    
+      allow delete: if isAdmin();
+    }
+
+    match /stores/{storeId} {
+      allow read: if isOwner(resource.data.uid) || isAdmin();
+      allow create: if isAuthenticated() && isOwner(request.resource.data.uid) && isValidStore(request.resource.data);
+      allow update: if isAuthenticated() && isOwner(resource.data.uid) && isOwner(request.resource.data.uid) && isValidStore(request.resource.data);
+      allow delete: if isAuthenticated() && isOwner(resource.data.uid);
+    }
+
+    match /events/{eventId} {
+      allow create: if isValidEvent(request.resource.data);
+      allow read, delete: if isAuthenticated() && (resource.data.ownerId == request.auth.uid || isAdmin());
+    }
+  }
+}

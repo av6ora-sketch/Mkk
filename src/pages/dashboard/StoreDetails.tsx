@@ -395,7 +395,7 @@ export default function StoreDetails() {
             <Activity className="h-5 w-5 text-purple-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{checkoutViews + checkoutClicks}</div>
+            <div className="text-3xl font-bold">{checkoutStarts}</div>
           </CardContent>
         </Card>
         <Card>
@@ -404,7 +404,16 @@ export default function StoreDetails() {
             <AlertCircle className="h-5 w-5 text-red-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{checkoutExits}</div>
+            <div className="text-3xl font-bold">{checkoutAbandons}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">{language === 'ar' ? 'طلبات مكتملة' : 'Purchases'}</CardTitle>
+            <CheckCircle2 className="h-5 w-5 text-green-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">{purchases}</div>
           </CardContent>
         </Card>
         <Card>
@@ -442,7 +451,7 @@ export default function StoreDetails() {
                     }`}>
                       {event.eventType === 'page_view' ? <Users className="h-4 w-4" /> : 
                        event.eventType === 'email_captured' ? <Mail className="h-4 w-4" /> :
-                       event.eventType === 'purchase_complete' ? <CheckCircle className="h-4 w-4" /> :
+                       event.eventType === 'purchase_complete' ? <CheckCircle2 className="h-4 w-4" /> :
                        event.eventType === 'checkout_abandon' ? <AlertCircle className="h-4 w-4" /> :
                        <ShoppingCart className="h-4 w-4" />}
                     </div>

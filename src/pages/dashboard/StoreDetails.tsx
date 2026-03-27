@@ -14,6 +14,7 @@ interface StoreData {
   name: string;
   domain: string;
   status: string;
+  platform?: string;
   createdAt: string;
 }
 
@@ -163,6 +164,35 @@ export default function StoreDetails() {
   const pageViews = events.filter(e => e.eventType === "page_view").length;
   const addCarts = events.filter(e => e.eventType === "add_to_cart").length;
 
+  const getPlatformInstructions = () => {
+    switch (store.platform) {
+      case "woocommerce":
+        return language === 'ar' 
+          ? "في لوحة تحكم ووكومرس، اذهب إلى المظهر > محرر القوالب (Theme Editor)، ثم اختر ملف header.php وألصق الكود قبل وسم </head>."
+          : "In your WooCommerce dashboard, go to Appearance > Theme Editor, select header.php, and paste the code before the </head> tag.";
+      case "shopify":
+        return language === 'ar'
+          ? "في لوحة تحكم شوبيفاي، اذهب إلى Online Store > Themes > Edit Code، ثم افتح ملف theme.liquid وألصق الكود قبل وسم </head>."
+          : "In your Shopify dashboard, go to Online Store > Themes > Edit Code, open theme.liquid, and paste the code before the </head> tag.";
+      case "salla":
+        return language === 'ar'
+          ? "في منصة سلة، اذهب إلى إعدادات المتجر > إعدادات متقدمة > إضافة أكواد مخصصة، وألصق الكود في قسم 'أكواد الهيدر'."
+          : "In Salla, go to Store Settings > Advanced Settings > Custom Codes, and paste the code in the 'Header Codes' section.";
+      case "zid":
+        return language === 'ar'
+          ? "في منصة زد، اذهب إلى الإعدادات > الأكواد المخصصة، وأضف كود جديد في قسم الـ Head."
+          : "In Zid, go to Settings > Custom Codes, and add a new code in the Head section.";
+      case "odoo":
+        return language === 'ar'
+          ? "في أودو، اذهب إلى Website > Configuration > Settings، وابحث عن 'Custom Code' أو قم بتعديل قالب HTML الرئيسي لإضافة الكود في الـ Head."
+          : "In Odoo, go to Website > Configuration > Settings, look for 'Custom Code' or edit the main HTML template to add the code in the Head.";
+      default:
+        return language === 'ar'
+          ? "لم نستقبل أي بيانات من متجرك حتى الآن. يرجى التأكد من إضافة كود التتبع التالي في وسم <code>&lt;head&gt;</code> في جميع صفحات متجرك."
+          : "We haven't received any data from your store yet. Please make sure to add the following tracking code inside the <code>&lt;head&gt;</code> tag on all pages of your store.";
+    }
+  };
+
   return (
     <div className="space-y-6 font-sans">
       <div className="flex items-center gap-4">
@@ -187,9 +217,7 @@ export default function StoreDetails() {
             <div className="space-y-4 w-full">
               <div>
                 <h3 className="font-semibold text-yellow-800">{language === 'ar' ? 'في انتظار استقبال البيانات' : 'Waiting for Data'}</h3>
-                <p className="text-sm text-yellow-700 mt-1">
-                  {language === 'ar' ? 'لم نستقبل أي بيانات من متجرك حتى الآن. يرجى التأكد من إضافة كود التتبع التالي في وسم <code>&lt;head&gt;</code> في جميع صفحات متجرك.' : 'We haven\'t received any data from your store yet. Please make sure to add the following tracking code inside the <code>&lt;head&gt;</code> tag on all pages of your store.'}
-                </p>
+                <p className="text-sm text-yellow-700 mt-1" dangerouslySetInnerHTML={{ __html: getPlatformInstructions() }} />
               </div>
               <div className="relative">
                 <pre className="p-4 bg-slate-950 text-slate-50 rounded-lg overflow-x-auto text-sm dir-ltr text-left">

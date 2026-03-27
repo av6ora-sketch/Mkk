@@ -11,7 +11,8 @@ import {
   ShieldAlert,
   Menu,
   X,
-  Loader2
+  Loader2,
+  LifeBuoy
 } from "lucide-react";
 import { cn } from "@/src/lib/utils";
 import { Button } from "@/src/components/ui/button";
@@ -50,6 +51,7 @@ export default function AdminLayout() {
     { name: language === 'ar' ? "المستخدمين" : "Users", href: "/admin/users", icon: Users },
     { name: language === 'ar' ? "المتاجر المربوطة" : "Connected Stores", href: "/admin/stores", icon: Store },
     { name: language === 'ar' ? "التقارير" : "Reports", href: "/admin/reports", icon: FileText },
+    { name: language === 'ar' ? "تذاكر الدعم" : "Support Tickets", href: "/admin/support", icon: LifeBuoy },
     { name: language === 'ar' ? "حساب المدير" : "Admin Profile", href: "/admin/profile", icon: User },
   ];
 

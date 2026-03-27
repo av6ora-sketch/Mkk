@@ -114,6 +114,71 @@
         }
       },
       "required": ["storeId", "ownerId", "eventType", "url", "timestamp"]
+    },
+    "Ticket": {
+      "title": "Ticket",
+      "description": "A support ticket created by a user",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "The ID of the user who created the ticket"
+        },
+        "userName": {
+          "type": "string",
+          "description": "The name of the user"
+        },
+        "userEmail": {
+          "type": "string",
+          "description": "The email of the user"
+        },
+        "subject": {
+          "type": "string",
+          "description": "The subject of the ticket"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["open", "closed"],
+          "description": "The status of the ticket"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The creation time of the ticket"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The last update time of the ticket"
+        }
+      },
+      "required": ["userId", "subject", "status", "createdAt", "updatedAt"]
+    },
+    "Message": {
+      "title": "Message",
+      "description": "A message within a support ticket",
+      "type": "object",
+      "properties": {
+        "senderId": {
+          "type": "string",
+          "description": "The ID of the sender"
+        },
+        "senderRole": {
+          "type": "string",
+          "enum": ["user", "admin"],
+          "description": "The role of the sender"
+        },
+        "text": {
+          "type": "string",
+          "description": "The text of the message"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The creation time of the message"
+        }
+      },
+      "required": ["senderId", "senderRole", "text", "createdAt"]
     }
   },
   "firestore": {
@@ -134,6 +199,18 @@
         "$ref": "#/entities/TrackingEvent"
       },
       "description": "The tracking events collection"
+    },
+    "/tickets/{ticketId}": {
+      "schema": {
+        "$ref": "#/entities/Ticket"
+      },
+      "description": "The support tickets collection"
+    },
+    "/tickets/{ticketId}/messages/{messageId}": {
+      "schema": {
+        "$ref": "#/entities/Message"
+      },
+      "description": "The messages within a support ticket"
     }
   }
 }

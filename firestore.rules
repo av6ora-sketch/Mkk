@@ -95,6 +95,25 @@ service cloud.firestore {
              (!('metadata' in data) || (data.metadata is string && data.metadata.size() < 5000));
     }
 
+    function isValidTicket(data) {
+      return hasOnlyAllowedFields(['userId', 'userName', 'userEmail', 'subject', 'status', 'createdAt', 'updatedAt']) &&
+             data.userId is string && data.userId.size() > 0 && data.userId.size() < 100 &&
+             (!('userName' in data) || (data.userName is string && data.userName.size() <= 100)) &&
+             (!('userEmail' in data) || (data.userEmail is string && data.userEmail.size() <= 100)) &&
+             data.subject is string && data.subject.size() > 0 && data.subject.size() < 200 &&
+             data.status in ['open', 'closed'] &&
+             (data.createdAt is timestamp || data.createdAt is string) &&
+             (data.updatedAt is timestamp || data.updatedAt is string);
+    }
+
+    function isValidMessage(data) {
+      return hasOnlyAllowedFields(['senderId', 'senderRole', 'text', 'createdAt']) &&
+             data.senderId is string && data.senderId.size() > 0 && data.senderId.size() < 100 &&
+             data.senderRole in ['user', 'admin'] &&
+             data.text is string && data.text.size() > 0 && data.text.size() < 5000 &&
+             (data.createdAt is timestamp || data.createdAt is string);
+    }
+
     match /users/{userId} {
       allow read: if isOwner(userId) || isAdmin();
       
@@ -122,6 +141,21 @@ service cloud.firestore {
     match /events/{eventId} {
       allow create: if isValidEvent(request.resource.data);
       allow read, delete: if isAuthenticated() && (resource.data.ownerId == request.auth.uid || isAdmin());
+    }
+
+    match /tickets/{ticketId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid && isValidTicket(request.resource.data);
+      allow update: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin()) && isValidTicket(request.resource.data);
+      allow delete: if isAdmin();
+
+      match /messages/{messageId} {
+        allow read: if isAuthenticated() && (get(/databases/$(database)/documents/tickets/$(ticketId)).data.userId == request.auth.uid || isAdmin());
+        allow create: if isAuthenticated() && 
+                      (get(/databases/$(database)/documents/tickets/$(ticketId)).data.userId == request.auth.uid || isAdmin()) && 
+                      isValidMessage(request.resource.data) &&
+                      request.resource.data.senderId == request.auth.uid;
+      }
     }
   }
 }

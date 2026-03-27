@@ -23,15 +23,15 @@ export default function MainLayout() {
       <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <Link to="/" className="flex items-center gap-2">
-            <Activity className="h-6 w-6 text-primary" />
+            <Activity className="h-6 w-6 text-black" />
             <span className="font-bold text-xl tracking-tight">{t('app.name')}</span>
           </Link>
           
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-muted-foreground">
-            <a href="#about" className="hover:text-primary transition-colors">{t('nav.about')}</a>
-            <a href="#how-it-works" className="hover:text-primary transition-colors">{t('nav.howItWorks')}</a>
-            <a href="#features" className="hover:text-primary transition-colors">{t('nav.features')}</a>
+            <Link to="/#about" className="hover:text-primary transition-colors">{t('nav.about')}</Link>
+            <Link to="/#how-it-works" className="hover:text-primary transition-colors">{t('nav.howItWorks')}</Link>
+            <Link to="/#features" className="hover:text-primary transition-colors">{t('nav.features')}</Link>
           </nav>
           
           <div className="hidden md:flex items-center gap-4">
@@ -66,9 +66,9 @@ export default function MainLayout() {
         {isMobileMenuOpen && (
           <div className="md:hidden border-t border-border bg-background p-4 space-y-4 shadow-lg absolute w-full">
             <nav className="flex flex-col space-y-4 text-sm font-medium text-muted-foreground">
-              <a href="#about" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-primary transition-colors">{t('nav.about')}</a>
-              <a href="#how-it-works" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-primary transition-colors">{t('nav.howItWorks')}</a>
-              <a href="#features" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-primary transition-colors">{t('nav.features')}</a>
+              <Link to="/#about" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-primary transition-colors">{t('nav.about')}</Link>
+              <Link to="/#how-it-works" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-primary transition-colors">{t('nav.howItWorks')}</Link>
+              <Link to="/#features" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-primary transition-colors">{t('nav.features')}</Link>
             </nav>
             <div className="flex flex-col gap-3 pt-4 border-t border-border">
               {user ? (
@@ -95,7 +95,7 @@ export default function MainLayout() {
       <footer className="border-t border-border bg-background py-12">
         <div className="container mx-auto px-4 flex flex-col items-center justify-center gap-6">
           <div className="flex items-center gap-2">
-            <Activity className="h-6 w-6 text-primary" />
+            <Activity className="h-6 w-6 text-black" />
             <span className="font-bold text-xl tracking-tight">{t('app.name')}</span>
           </div>
           <div className="flex gap-4 text-sm text-muted-foreground">

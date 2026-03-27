@@ -3,7 +3,7 @@ import { motion } from "motion/react";
 import { Button } from "@/src/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/src/components/ui/card";
 import { Input } from "@/src/components/ui/input";
-import { Store, Plus, Code, CheckCircle2, ExternalLink, Loader2 } from "lucide-react";
+import { Store, Plus, Code, CheckCircle2, ExternalLink, Loader2, ShoppingBag } from "lucide-react";
 import { db, auth } from "@/src/firebase";
 import firebaseConfig from "@/firebase-applet-config.json";
 import { collection, addDoc, query, where, onSnapshot, getDocs } from "firebase/firestore";
@@ -15,17 +15,28 @@ interface StoreData {
   name: string;
   domain: string;
   status: string;
+  platform?: string;
   visitors?: string;
   conversion?: string;
 }
 
 import { handleFirestoreError, OperationType } from "@/src/lib/firestore-error";
 
+const platforms = [
+  { id: "custom", name: "Custom Website", nameAr: "موقع مخصص" },
+  { id: "woocommerce", name: "WooCommerce", nameAr: "ووكومرس" },
+  { id: "shopify", name: "Shopify", nameAr: "شوبيفاي" },
+  { id: "salla", name: "Salla", nameAr: "سلة" },
+  { id: "zid", name: "Zid", nameAr: "زد" },
+  { id: "odoo", name: "Odoo", nameAr: "أودو" },
+];
+
 export default function Stores() {
   const { t, language } = useLanguage();
   const [showAddStore, setShowAddStore] = useState(false);
   const [storeName, setStoreName] = useState("");
   const [storeUrl, setStoreUrl] = useState("");
+  const [platform, setPlatform] = useState("custom");
   const [showSnippet, setShowSnippet] = useState(false);
   const [stores, setStores] = useState<StoreData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -116,6 +127,7 @@ export default function Stores() {
         uid: auth.currentUser.uid,
         name: storeName,
         domain: storeUrl,
+        platform: platform,
         status: "pending",
         createdAt: new Date().toISOString()
       });
@@ -161,6 +173,35 @@ export default function Stores() {
   })();
 </script>`;
 
+  const getPlatformInstructions = () => {
+    switch (platform) {
+      case "woocommerce":
+        return language === 'ar' 
+          ? "في لوحة تحكم ووكومرس، اذهب إلى المظهر > محرر القوالب (Theme Editor)، ثم اختر ملف header.php وألصق الكود قبل وسم </head>."
+          : "In your WooCommerce dashboard, go to Appearance > Theme Editor, select header.php, and paste the code before the </head> tag.";
+      case "shopify":
+        return language === 'ar'
+          ? "في لوحة تحكم شوبيفاي، اذهب إلى Online Store > Themes > Edit Code، ثم افتح ملف theme.liquid وألصق الكود قبل وسم </head>."
+          : "In your Shopify dashboard, go to Online Store > Themes > Edit Code, open theme.liquid, and paste the code before the </head> tag.";
+      case "salla":
+        return language === 'ar'
+          ? "في منصة سلة، اذهب إلى إعدادات المتجر > إعدادات متقدمة > إضافة أكواد مخصصة، وألصق الكود في قسم 'أكواد الهيدر'."
+          : "In Salla, go to Store Settings > Advanced Settings > Custom Codes, and paste the code in the 'Header Codes' section.";
+      case "zid":
+        return language === 'ar'
+          ? "في منصة زد، اذهب إلى الإعدادات > الأكواد المخصصة، وأضف كود جديد في قسم الـ Head."
+          : "In Zid, go to Settings > Custom Codes, and add a new code in the Head section.";
+      case "odoo":
+        return language === 'ar'
+          ? "في أودو، اذهب إلى Website > Configuration > Settings، وابحث عن 'Custom Code' أو قم بتعديل قالب HTML الرئيسي لإضافة الكود في الـ Head."
+          : "In Odoo, go to Website > Configuration > Settings, look for 'Custom Code' or edit the main HTML template to add the code in the Head.";
+      default:
+        return language === 'ar'
+          ? "قم بنسخ الكود التالي ولصقه في وسم <head> في جميع صفحات متجرك."
+          : "Copy the following code and paste it inside the <head> tag on all pages of your store.";
+    }
+  };
+
   return (
     <div className="space-y-6 font-sans">
       <div className="flex justify-between items-center">
@@ -168,7 +209,7 @@ export default function Stores() {
           <h2 className="text-2xl font-bold tracking-tight">{t('sidebar.stores')}</h2>
           <p className="text-muted-foreground">{language === 'ar' ? 'إدارة المتاجر الخاصة بك وربط متاجر جديدة.' : 'Manage your stores and connect new ones.'}</p>
         </div>
-        <Button onClick={() => { setShowAddStore(true); setShowSnippet(false); setStoreUrl(""); setStoreName(""); }}>
+        <Button onClick={() => { setShowAddStore(true); setShowSnippet(false); setStoreUrl(""); setStoreName(""); setPlatform("custom"); }}>
           <Plus className="mr-2 h-4 w-4" />
           {language === 'ar' ? 'ربط متجر جديد' : 'Connect New Store'}
         </Button>
@@ -187,25 +228,46 @@ export default function Stores() {
             </CardHeader>
             <CardContent>
               {!showSnippet ? (
-                <form onSubmit={handleAddStore} className="flex flex-col md:flex-row gap-4">
-                  <Input 
-                    placeholder={language === 'ar' ? "اسم المتجر (مثال: متجر الأناقة)" : "Store Name (e.g., Elegance Store)"} 
-                    value={storeName}
-                    onChange={(e) => setStoreName(e.target.value)}
-                    className="flex-1"
-                    required
-                  />
-                  <Input 
-                    placeholder="https://your-store.com" 
-                    value={storeUrl}
-                    onChange={(e) => setStoreUrl(e.target.value)}
-                    dir="ltr"
-                    className={`flex-1 ${language === 'ar' ? 'text-right' : 'text-left'}`}
-                    required
-                  />
-                  <Button type="submit" disabled={isSubmitting}>
-                    {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : (language === 'ar' ? "إنشاء كود التتبع" : "Generate Tracking Code")}
-                  </Button>
+                <form onSubmit={handleAddStore} className="flex flex-col gap-4">
+                  <div className="flex flex-col md:flex-row gap-4">
+                    <Input 
+                      placeholder={language === 'ar' ? "اسم المتجر (مثال: متجر الأناقة)" : "Store Name (e.g., Elegance Store)"} 
+                      value={storeName}
+                      onChange={(e) => setStoreName(e.target.value)}
+                      className="flex-1"
+                      required
+                    />
+                    <Input 
+                      placeholder="https://your-store.com" 
+                      value={storeUrl}
+                      onChange={(e) => setStoreUrl(e.target.value)}
+                      dir="ltr"
+                      className={`flex-1 ${language === 'ar' ? 'text-right' : 'text-left'}`}
+                      required
+                    />
+                  </div>
+                  <div className="flex flex-col md:flex-row gap-4 items-end">
+                    <div className="flex-1 w-full">
+                      <label className="block text-sm font-medium text-foreground mb-1.5">
+                        {language === 'ar' ? 'منصة المتجر' : 'Store Platform'}
+                      </label>
+                      <select
+                        value={platform}
+                        onChange={(e) => setPlatform(e.target.value)}
+                        className={`flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${language === 'ar' ? 'text-right' : 'text-left'}`}
+                        required
+                      >
+                        {platforms.map(p => (
+                          <option key={p.id} value={p.id}>
+                            {language === 'ar' ? p.nameAr : p.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <Button type="submit" disabled={isSubmitting} className="w-full md:w-auto">
+                      {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : (language === 'ar' ? "إنشاء كود التتبع" : "Generate Tracking Code")}
+                    </Button>
+                  </div>
                 </form>
               ) : (
                 <div className="space-y-4">
@@ -213,7 +275,7 @@ export default function Stores() {
                     <CheckCircle2 className="h-5 w-5 mt-0.5" />
                     <div>
                       <h4 className="font-semibold">{language === 'ar' ? 'تم إنشاء الكود بنجاح' : 'Code Generated Successfully'}</h4>
-                      <p className="text-sm mt-1">{language === 'ar' ? 'قم بنسخ الكود التالي ولصقه في وسم <code>&lt;head&gt;</code> في جميع صفحات متجرك.' : 'Copy the following code and paste it inside the <code>&lt;head&gt;</code> tag on all pages of your store.'}</p>
+                      <p className="text-sm mt-1">{getPlatformInstructions()}</p>
                     </div>
                   </div>
                   <div className="relative">
@@ -255,14 +317,18 @@ export default function Stores() {
           {stores.map((store) => (
             <motion.div key={store.id} whileHover={{ y: -5 }}>
               <Card 
-                className="cursor-pointer hover:border-primary transition-colors"
+                className="cursor-pointer hover:border-primary transition-colors h-full"
                 onClick={() => navigate(`/dashboard/stores/${store.id}`)}
               >
                 <CardHeader className="pb-2">
                   <div className="flex justify-between items-start">
                     <div className="flex items-center gap-3">
                       <div className="h-10 w-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                        <Store className="h-5 w-5 text-primary" />
+                        {store.platform && store.platform !== 'custom' ? (
+                          <ShoppingBag className="h-5 w-5 text-primary" />
+                        ) : (
+                          <Store className="h-5 w-5 text-primary" />
+                        )}
                       </div>
                       <div>
                         <CardTitle className="text-lg">{store.name}</CardTitle>
@@ -288,6 +354,14 @@ export default function Stores() {
                       <p className="font-semibold">{store.conversion || "0%"}</p>
                     </div>
                   </div>
+                  {store.platform && (
+                    <div className="mt-4 pt-4 border-t border-border flex justify-between items-center">
+                      <span className="text-xs text-muted-foreground">{language === 'ar' ? 'المنصة:' : 'Platform:'}</span>
+                      <span className="text-xs font-medium bg-muted px-2 py-1 rounded-md">
+                        {platforms.find(p => p.id === store.platform)?.nameAr || store.platform}
+                      </span>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </motion.div>

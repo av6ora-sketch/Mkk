@@ -81,7 +81,7 @@ export default function DashboardLayout() {
       )}>
         <div className="h-16 flex items-center justify-between px-6 border-b border-border">
           <Link to="/" className="flex items-center gap-2" onClick={() => setIsSidebarOpen(false)}>
-            <Activity className="h-6 w-6 text-primary" />
+            <Activity className="h-6 w-6 text-black" />
             <span className="font-bold text-xl tracking-tight">{t('app.name')}</span>
           </Link>
           <Button 

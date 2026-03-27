@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { motion } from "motion/react";
 import { Button } from "@/src/components/ui/button";
 import { 
@@ -18,7 +18,8 @@ import {
   MousePointerClick,
   Video,
   SplitSquareHorizontal,
-  Target
+  Target,
+  ShoppingBag
 } from "lucide-react";
 import { useLanguage } from "../contexts/LanguageContext";
 import { auth } from "../firebase";
@@ -63,6 +64,7 @@ const TypewriterText = () => {
 export default function Home() {
   const { language } = useLanguage();
   const [user, setUser] = useState<User | null>(null);
+  const { hash } = useLocation();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -70,6 +72,15 @@ export default function Home() {
     });
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (hash) {
+      const element = document.getElementById(hash.replace("#", ""));
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth" });
+      }
+    }
+  }, [hash]);
 
   return (
     <div className={`flex flex-col min-h-screen ${language === 'ar' ? 'dir-rtl' : 'dir-ltr'}`}>
@@ -198,7 +209,7 @@ export default function Home() {
       </section>
 
       {/* About Section */}
-      <section className="py-24 bg-muted/50">
+      <section id="about" className="py-24 bg-muted/50">
         <div className="container mx-auto px-4">
           <div className="grid md:grid-cols-2 gap-12 items-center">
             <motion.div
@@ -234,7 +245,7 @@ export default function Home() {
               viewport={{ once: true }}
               className="relative h-[400px] rounded-3xl overflow-hidden border border-border bg-background shadow-xl flex items-center justify-center"
             >
-              <Activity className="h-32 w-32 text-primary/10" />
+              <Activity className="h-32 w-32 text-black" />
               <div className="absolute inset-0 bg-gradient-to-tr from-primary/5 to-transparent" />
             </motion.div>
           </div>
@@ -300,6 +311,33 @@ export default function Home() {
               {language === 'ar' ? 'مميزات تجعل Avbora أداة بيع حقيقية' : 'Features that make Avbora a real sales tool'}
             </h2>
           </div>
+          
+          {/* Platform Compatibility Sub-section */}
+          <div className="mb-20">
+            <h3 className="text-2xl font-bold mb-10 text-center text-white/90">
+              {language === 'ar' ? 'نتوافق مع جميع المنصات' : 'Compatible with all platforms'}
+            </h3>
+            <div className="flex flex-wrap justify-center gap-6 md:gap-10 opacity-80">
+              {[
+                { name: "Salla", nameAr: "سلة" },
+                { name: "Zid", nameAr: "زد" },
+                { name: "Shopify", nameAr: "شوبيفاي" },
+                { name: "WooCommerce", nameAr: "ووكومرس" },
+                { name: "Odoo", nameAr: "أودو" },
+                { name: "Custom", nameAr: "موقع مخصص" }
+              ].map((p, i) => (
+                <div key={i} className="flex flex-col items-center gap-2">
+                  <div className="h-16 w-16 bg-white/10 rounded-2xl flex items-center justify-center border border-white/10 hover:bg-white/20 transition-colors">
+                    <ShoppingBag className="h-8 w-8 text-white" />
+                  </div>
+                  <span className="text-sm font-medium text-white/70">
+                    {language === 'ar' ? p.nameAr : p.name}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[
               { 

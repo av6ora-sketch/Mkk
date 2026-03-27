@@ -22,7 +22,7 @@ interface TrackingEvent {
   id: string;
   eventType: string;
   url: string;
-  timestamp: string;
+  timestamp: any; // Can be string or Firestore Timestamp
   metadata?: string;
 }
 
@@ -78,8 +78,15 @@ export default function StoreDetails() {
             eventsData.push({ id: doc.id, ...doc.data() } as TrackingEvent);
           });
           
+          const getTimestamp = (ts: any) => {
+            if (!ts) return 0;
+            if (typeof ts === 'string') return new Date(ts).getTime();
+            if (ts.seconds) return ts.seconds * 1000;
+            return new Date(ts).getTime();
+          };
+
           // Sort by timestamp descending
-          eventsData.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+          eventsData.sort((a, b) => getTimestamp(b.timestamp) - getTimestamp(a.timestamp));
           
           setEvents(eventsData);
           setLoading(false);
@@ -154,6 +161,8 @@ export default function StoreDetails() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
+      }).then(function() {
+        console.log('Avbora Tracked:', eventType, metadata || '');
       }).catch(function(e){console.error('Tracking error', e)});
     }
 
@@ -162,17 +171,31 @@ export default function StoreDetails() {
 
     // Smart tracking for Cart and Checkout
     document.addEventListener('click', function(e) {
-      var target = e.target;
-      var text = target.innerText || target.value || '';
-      var lowerText = text.toLowerCase();
+      var target = e.target.closest('button, a, input[type="button"], input[type="submit"], [role="button"]');
+      if (!target) return;
+      
+      var text = target.innerText || target.value || target.getAttribute('aria-label') || target.getAttribute('title') || '';
+      var lowerText = text.toLowerCase().trim();
       
       // Add to Cart detection
-      if (lowerText.includes('أضف للسلة') || lowerText.includes('add to cart') || lowerText.includes('إضافة للسلة')) {
+      var cartKeywords = ['أضف للسلة', 'add to cart', 'إضافة للسلة', 'أضف إلى السلة', 'إضافة إلى السلة', 'سلة المشتريات', 'buy now', 'اشتري الآن', 'تسوق الآن', 'shop now'];
+      var isCart = cartKeywords.some(function(kw) { return lowerText.includes(kw); });
+      
+      // Check ID and Class for cart keywords if text doesn't match
+      if (!isCart) {
+        var idOrClass = (target.id + ' ' + target.className).toLowerCase();
+        isCart = ['add-to-cart', 'add_to_cart', 'add-cart', 'btn-cart'].some(function(kw) { return idOrClass.includes(kw); });
+      }
+      
+      if (isCart) {
         track('add_to_cart', { button_text: text });
       }
       
       // Checkout detection
-      if (lowerText.includes('إتمام الطلب') || lowerText.includes('checkout') || lowerText.includes('الدفع')) {
+      var checkoutKeywords = ['إتمام الطلب', 'checkout', 'الدفع', 'دفع', 'سداد', 'المتابعة للدفع', 'شراء', 'buy'];
+      var isCheckout = checkoutKeywords.some(function(kw) { return lowerText.includes(kw); });
+      
+      if (isCheckout) {
         track('checkout_click', { button_text: text });
       }
     });
@@ -404,12 +427,44 @@ export default function StoreDetails() {
                     </div>
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    {new Date(event.timestamp).toLocaleString(language === 'ar' ? 'ar-EG' : 'en-US')}
+                    {(() => {
+                      const ts = event.timestamp;
+                      const date = ts?.seconds ? new Date(ts.seconds * 1000) : new Date(ts);
+                      return date.toLocaleString(language === 'ar' ? 'ar-EG' : 'en-US');
+                    })()}
                   </div>
                 </div>
               ))}
             </div>
           )}
+        </CardContent>
+      </Card>
+      
+      <Card>
+        <CardHeader>
+          <CardTitle>{language === 'ar' ? 'كود التتبع' : 'Tracking Code'}</CardTitle>
+          <CardDescription>
+            {language === 'ar' 
+              ? 'انسخ هذا الكود وضعه في وسم <head> في جميع صفحات متجرك لتفعيل التتبع.' 
+              : 'Copy this code and place it inside the <head> tag on all pages of your store to enable tracking.'}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="p-4 bg-muted rounded-lg text-sm" dangerouslySetInnerHTML={{ __html: getPlatformInstructions() }} />
+          <div className="relative">
+            <pre className="p-4 bg-slate-950 text-slate-50 rounded-lg overflow-x-auto text-sm dir-ltr text-left">
+              <code>{snippetCode}</code>
+            </pre>
+            <Button 
+              size="sm" 
+              variant="secondary" 
+              className={`absolute top-2 ${language === 'ar' ? 'right-2' : 'left-2'}`}
+              onClick={() => navigator.clipboard.writeText(snippetCode)}
+            >
+              <Copy className={`h-4 w-4 ${language === 'ar' ? 'ml-2' : 'mr-2'}`} />
+              {language === 'ar' ? 'نسخ الكود' : 'Copy Code'}
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </div>

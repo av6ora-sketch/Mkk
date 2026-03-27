@@ -144,23 +144,37 @@ export default function StoreDetails() {
     var ownerId = "${auth.currentUser?.uid || ''}";
     var endpoint = "https://firestore.googleapis.com/v1/projects/" + projectId + "/databases/" + databaseId + "/documents/events?key=" + apiKey;
 
+    // Session management
+    var sessionId = localStorage.getItem('avbora_session_id');
+    if (!sessionId) {
+      sessionId = 'sess_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now();
+      localStorage.setItem('avbora_session_id', sessionId);
+    }
+
     function track(eventType, metadata) {
       var payload = {
         fields: {
           storeId: { stringValue: storeId },
           ownerId: { stringValue: ownerId },
           eventType: { stringValue: eventType },
+          sessionId: { stringValue: sessionId },
           url: { stringValue: window.location.href },
           timestamp: { timestampValue: new Date().toISOString() }
         }
       };
+      
+      // Include captured email if available in session
+      var savedEmail = localStorage.getItem('avbora_email');
+      if (savedEmail) {
+        payload.fields.email = { stringValue: savedEmail };
+      }
+
       if (metadata) {
         payload.fields.metadata = { stringValue: JSON.stringify(metadata) };
       }
       
       var body = JSON.stringify(payload);
       
-      // Use sendBeacon for more reliability on page exit/redirect
       if (navigator.sendBeacon) {
         navigator.sendBeacon(endpoint, body);
         console.log('Avbora Tracked (Beacon):', eventType, metadata || '');
@@ -169,8 +183,6 @@ export default function StoreDetails() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: body
-        }).then(function() {
-          console.log('Avbora Tracked:', eventType, metadata || '');
         }).catch(function(e){console.error('Tracking error', e)});
       }
     }
@@ -190,7 +202,6 @@ export default function StoreDetails() {
       var cartKeywords = ['أضف للسلة', 'add to cart', 'إضافة للسلة', 'أضف إلى السلة', 'إضافة إلى السلة', 'سلة المشتريات', 'buy now', 'اشتري الآن', 'تسوق الآن', 'shop now', 'أضف إلى العربة', 'أضف للعربة'];
       var isCart = cartKeywords.some(function(kw) { return lowerText.includes(kw); });
       
-      // Check ID and Class for cart keywords if text doesn't match
       if (!isCart) {
         var idOrClass = (target.id + ' ' + target.className).toLowerCase();
         var odooClasses = ['js_check_product', 'a-submit', 'add_to_cart_button', 'product_add_to_cart'];
@@ -199,7 +210,9 @@ export default function StoreDetails() {
       }
       
       if (isCart) {
-        track('add_to_cart', { button_text: text });
+        // Try to find a product ID from common attributes
+        var productId = target.getAttribute('data-product-id') || target.getAttribute('data-id') || window.location.pathname.split('/').pop();
+        track('add_to_cart', { product_id: productId, button_text: text });
       }
       
       // Checkout detection
@@ -207,21 +220,20 @@ export default function StoreDetails() {
       var isCheckout = checkoutKeywords.some(function(kw) { return lowerText.includes(kw); });
       
       if (isCheckout) {
-        track('checkout_click', { button_text: text });
+        track('checkout_start', { button_text: text });
       }
     });
 
-    // Detect checkout page entry
-    if (window.location.href.includes('checkout') || window.location.href.includes('cart')) {
-      track('checkout_view');
+    // URL based tracking
+    if (window.location.href.includes('/checkout')) {
+      track('checkout_start');
     }
-
-    // Detect checkout abandonment
-    window.addEventListener('beforeunload', function() {
-      if (window.location.href.includes('checkout')) {
-        track('checkout_exit');
-      }
-    });
+    if (window.location.href.includes('/cart')) {
+      track('cart_view');
+    }
+    if (window.location.href.includes('/success') || window.location.href.includes('/thank-you') || window.location.href.includes('/order-received')) {
+      track('purchase_complete');
+    }
 
     // Email capture
     document.addEventListener('change', function(e) {
@@ -229,6 +241,7 @@ export default function StoreDetails() {
       if (target.type === 'email' || (target.name && target.name.toLowerCase().includes('email'))) {
         var email = target.value;
         if (email && email.includes('@')) {
+          localStorage.setItem('avbora_email', email);
           track('email_captured', { email: email });
         }
       }
@@ -238,18 +251,19 @@ export default function StoreDetails() {
 
   const pageViews = events.filter(e => e.eventType === "page_view").length;
   const addCarts = events.filter(e => e.eventType === "add_to_cart").length;
-  const checkoutViews = events.filter(e => e.eventType === "checkout_view").length;
-  const checkoutClicks = events.filter(e => e.eventType === "checkout_click").length;
-  const checkoutExits = events.filter(e => e.eventType === "checkout_exit").length;
+  const checkoutStarts = events.filter(e => e.eventType === "checkout_start").length;
+  const checkoutAbandons = events.filter(e => e.eventType === "checkout_abandon").length;
+  const purchases = events.filter(e => e.eventType === "purchase_complete").length;
   const emailsCaptured = events.filter(e => e.eventType === "email_captured").length;
 
   const getEventName = (type: string) => {
     switch (type) {
       case 'page_view': return language === 'ar' ? 'زيارة صفحة' : 'Page View';
       case 'add_to_cart': return language === 'ar' ? 'إضافة للسلة' : 'Add to Cart';
-      case 'checkout_view': return language === 'ar' ? 'دخول الدفع' : 'Checkout View';
-      case 'checkout_click': return language === 'ar' ? 'ضغط الدفع' : 'Checkout Click';
-      case 'checkout_exit': return language === 'ar' ? 'خروج من الدفع' : 'Checkout Exit';
+      case 'cart_view': return language === 'ar' ? 'عرض السلة' : 'Cart View';
+      case 'checkout_start': return language === 'ar' ? 'بدء الدفع' : 'Checkout Start';
+      case 'checkout_abandon': return language === 'ar' ? 'سلة متروكة' : 'Checkout Abandon';
+      case 'purchase_complete': return language === 'ar' ? 'طلب مكتمل' : 'Purchase Complete';
       case 'email_captured': return language === 'ar' ? 'التقاط إيميل' : 'Email Captured';
       default: return type;
     }
@@ -422,16 +436,22 @@ export default function StoreDetails() {
                     <div className={`p-2 rounded-full ${
                       event.eventType === 'page_view' ? 'bg-blue-100 text-blue-600' : 
                       event.eventType === 'email_captured' ? 'bg-indigo-100 text-indigo-600' :
+                      event.eventType === 'purchase_complete' ? 'bg-green-100 text-green-600' :
+                      event.eventType === 'checkout_abandon' ? 'bg-red-100 text-red-600' :
                       'bg-orange-100 text-orange-600'
                     }`}>
                       {event.eventType === 'page_view' ? <Users className="h-4 w-4" /> : 
                        event.eventType === 'email_captured' ? <Mail className="h-4 w-4" /> :
+                       event.eventType === 'purchase_complete' ? <CheckCircle className="h-4 w-4" /> :
+                       event.eventType === 'checkout_abandon' ? <AlertCircle className="h-4 w-4" /> :
                        <ShoppingCart className="h-4 w-4" />}
                     </div>
                     <div>
                       <p className="font-medium text-sm">
                         {event.eventType === 'email_captured' && event.metadata 
                           ? JSON.parse(event.metadata).email 
+                          : event.eventType === 'add_to_cart' && event.metadata && JSON.parse(event.metadata).product_id
+                          ? `${getEventName(event.eventType)} (${JSON.parse(event.metadata).product_id})`
                           : getEventName(event.eventType)}
                       </p>
                       <p className={`text-xs text-muted-foreground dir-ltr ${language === 'ar' ? 'text-right' : 'text-left'} truncate max-w-[200px] sm:max-w-xs`}>{event.url}</p>

@@ -1,15 +1,17 @@
 import { useState, useEffect } from "react";
+import { useOutletContext } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/src/components/ui/card";
 import { Button } from "@/src/components/ui/button";
 import { Download, FileText, Calendar, Loader2 } from "lucide-react";
 import { useLanguage } from "../../contexts/LanguageContext";
-import { db } from "@/src/firebase";
+import { db, auth } from "@/src/firebase";
 import { collection, getDocs } from "firebase/firestore";
 
 import { handleFirestoreError, OperationType } from "@/src/lib/firestore-error";
 
 export default function AdminReports() {
   const { language } = useLanguage();
+  const { permissions } = useOutletContext<{ permissions: Record<string, boolean> }>();
   const [loading, setLoading] = useState(true);
   const [reportData, setReportData] = useState<any>(null);
 
@@ -17,15 +19,31 @@ export default function AdminReports() {
 
   useEffect(() => {
     const fetchReportData = async () => {
+      if (!auth.currentUser) return;
       try {
-        const usersSnap = await getDocs(collection(db, "users"));
-        const storesSnap = await getDocs(collection(db, "stores"));
-        const eventsSnap = await getDocs(collection(db, "events"));
+        let usersCount = 0;
+        let storesCount = 0;
+        let eventsCount = 0;
+
+        if (permissions.manage_users) {
+          const usersSnap = await getDocs(collection(db, "users"));
+          usersCount = usersSnap.size;
+        }
+        
+        if (permissions.manage_stores) {
+          const storesSnap = await getDocs(collection(db, "stores"));
+          storesCount = storesSnap.size;
+        }
+        
+        if (permissions.view_reports) {
+          const eventsSnap = await getDocs(collection(db, "events"));
+          eventsCount = eventsSnap.size;
+        }
 
         setReportData({
-          users: usersSnap.size,
-          stores: storesSnap.size,
-          events: eventsSnap.size,
+          users: usersCount,
+          stores: storesCount,
+          events: eventsCount,
         });
       } catch (error) {
         handleFirestoreError(error, OperationType.LIST, "admin_reports");
@@ -35,7 +53,7 @@ export default function AdminReports() {
     };
 
     fetchReportData();
-  }, []);
+  }, [permissions]);
 
   const handleDownload = (type: string) => {
     // In a real app, this would generate and download a file

@@ -188,7 +188,7 @@ export default function AdminLayout() {
           </h1>
         </header>
         <div className="flex-1 overflow-y-auto p-4 lg:p-8">
-          <Outlet />
+          <Outlet context={{ permissions }} />
         </div>
       </main>
     </div>

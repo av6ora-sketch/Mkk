@@ -12,7 +12,8 @@ import {
   Activity,
   Menu,
   X,
-  Loader2
+  Loader2,
+  Settings
 } from "lucide-react";
 import { cn } from "@/src/lib/utils";
 import { Button } from "@/src/components/ui/button";
@@ -54,6 +55,7 @@ export default function DashboardLayout() {
     { name: t('sidebar.plans'), href: "/dashboard/plans", icon: CreditCard },
     { name: t('sidebar.profile'), href: "/dashboard/profile", icon: User },
     { name: t('sidebar.support'), href: "/dashboard/support", icon: LifeBuoy },
+    { name: t('sidebar.settings'), href: "/dashboard/settings", icon: Settings },
   ];
 
   if (isLoading) {

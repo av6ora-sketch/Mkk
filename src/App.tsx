@@ -29,6 +29,7 @@ const DashboardReports = lazy(() => import("./pages/dashboard/Reports"));
 const DashboardPlans = lazy(() => import("./pages/dashboard/Plans"));
 const DashboardProfile = lazy(() => import("./pages/dashboard/Profile"));
 const DashboardSupport = lazy(() => import("./pages/dashboard/Support"));
+const DashboardSettings = lazy(() => import("./pages/dashboard/Settings"));
 
 // Lazy Loaded Admin Pages
 const AdminOverview = lazy(() => import("./pages/admin/Overview"));
@@ -72,6 +73,7 @@ export default function App() {
               <Route path="plans" element={<DashboardPlans />} />
               <Route path="profile" element={<DashboardProfile />} />
               <Route path="support" element={<DashboardSupport />} />
+              <Route path="settings" element={<DashboardSettings />} />
             </Route>
 
             {/* Admin Dashboard Routes */}

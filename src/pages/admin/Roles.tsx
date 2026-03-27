@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/src
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
 import { Shield, Plus, Edit, Trash2, Loader2, Check } from "lucide-react";
-import { db } from "@/src/firebase";
+import { db, auth } from "@/src/firebase";
 import { collection, getDocs, doc, setDoc, deleteDoc, serverTimestamp } from "firebase/firestore";
 import { useLanguage } from "../../contexts/LanguageContext";
 import { handleFirestoreError, OperationType } from "@/src/lib/firestore-error";
@@ -44,6 +44,7 @@ export default function AdminRoles() {
   const [permissions, setPermissions] = useState(defaultPermissions);
 
   const fetchRoles = async () => {
+    if (!auth.currentUser) return;
     try {
       const querySnapshot = await getDocs(collection(db, "roles"));
       const rolesData: Role[] = [];

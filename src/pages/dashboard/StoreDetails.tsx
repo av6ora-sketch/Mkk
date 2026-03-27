@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
 import { Button } from "@/src/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/src/components/ui/card";
-import { ArrowRight, Activity, Users, ShoppingCart, CheckCircle2, AlertCircle, Copy, Loader2 } from "lucide-react";
+import { ArrowRight, Activity, Users, ShoppingCart, CheckCircle2, AlertCircle, Copy, Loader2, Mail } from "lucide-react";
 import { db, auth } from "@/src/firebase";
 import firebaseConfig from "../../../firebase-applet-config.json";
 import { doc, getDoc, collection, query, where, onSnapshot, updateDoc } from "firebase/firestore";
@@ -23,6 +23,7 @@ interface TrackingEvent {
   eventType: string;
   url: string;
   timestamp: string;
+  metadata?: string;
 }
 
 import { handleFirestoreError, OperationType } from "@/src/lib/firestore-error";
@@ -158,11 +159,67 @@ export default function StoreDetails() {
 
     window.AvboraTrack = track;
     track('page_view');
+
+    // Smart tracking for Cart and Checkout
+    document.addEventListener('click', function(e) {
+      var target = e.target;
+      var text = target.innerText || target.value || '';
+      var lowerText = text.toLowerCase();
+      
+      // Add to Cart detection
+      if (lowerText.includes('أضف للسلة') || lowerText.includes('add to cart') || lowerText.includes('إضافة للسلة')) {
+        track('add_to_cart', { button_text: text });
+      }
+      
+      // Checkout detection
+      if (lowerText.includes('إتمام الطلب') || lowerText.includes('checkout') || lowerText.includes('الدفع')) {
+        track('checkout_click', { button_text: text });
+      }
+    });
+
+    // Detect checkout page entry
+    if (window.location.href.includes('checkout') || window.location.href.includes('cart')) {
+      track('checkout_view');
+    }
+
+    // Detect checkout abandonment
+    window.addEventListener('beforeunload', function() {
+      if (window.location.href.includes('checkout')) {
+        track('checkout_exit');
+      }
+    });
+
+    // Email capture
+    document.addEventListener('change', function(e) {
+      var target = e.target;
+      if (target.type === 'email' || (target.name && target.name.toLowerCase().includes('email'))) {
+        var email = target.value;
+        if (email && email.includes('@')) {
+          track('email_captured', { email: email });
+        }
+      }
+    });
   })();
 </script>`;
 
   const pageViews = events.filter(e => e.eventType === "page_view").length;
   const addCarts = events.filter(e => e.eventType === "add_to_cart").length;
+  const checkoutViews = events.filter(e => e.eventType === "checkout_view").length;
+  const checkoutClicks = events.filter(e => e.eventType === "checkout_click").length;
+  const checkoutExits = events.filter(e => e.eventType === "checkout_exit").length;
+  const emailsCaptured = events.filter(e => e.eventType === "email_captured").length;
+
+  const getEventName = (type: string) => {
+    switch (type) {
+      case 'page_view': return language === 'ar' ? 'زيارة صفحة' : 'Page View';
+      case 'add_to_cart': return language === 'ar' ? 'إضافة للسلة' : 'Add to Cart';
+      case 'checkout_view': return language === 'ar' ? 'دخول الدفع' : 'Checkout View';
+      case 'checkout_click': return language === 'ar' ? 'ضغط الدفع' : 'Checkout Click';
+      case 'checkout_exit': return language === 'ar' ? 'خروج من الدفع' : 'Checkout Exit';
+      case 'email_captured': return language === 'ar' ? 'التقاط إيميل' : 'Email Captured';
+      default: return type;
+    }
+  };
 
   const getPlatformInstructions = () => {
     switch (store.platform) {
@@ -265,7 +322,7 @@ export default function StoreDetails() {
         </Card>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">{language === 'ar' ? 'إجمالي الزيارات' : 'Total Visits'}</CardTitle>
@@ -286,11 +343,29 @@ export default function StoreDetails() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">{language === 'ar' ? 'إجمالي الأحداث' : 'Total Events'}</CardTitle>
-            <Activity className="h-5 w-5 text-green-500" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">{language === 'ar' ? 'بدء الدفع' : 'Checkout Started'}</CardTitle>
+            <Activity className="h-5 w-5 text-purple-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{events.length}</div>
+            <div className="text-3xl font-bold">{checkoutViews + checkoutClicks}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">{language === 'ar' ? 'سلات متروكة' : 'Abandoned Carts'}</CardTitle>
+            <AlertCircle className="h-5 w-5 text-red-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">{checkoutExits}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">{language === 'ar' ? 'إيميلات تم التقاطها' : 'Emails Captured'}</CardTitle>
+            <Mail className="h-5 w-5 text-indigo-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">{emailsCaptured}</div>
           </CardContent>
         </Card>
       </div>
@@ -310,11 +385,21 @@ export default function StoreDetails() {
               {events.slice(0, 10).map((event) => (
                 <div key={event.id} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg border border-border">
                   <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-full ${event.eventType === 'page_view' ? 'bg-blue-100 text-blue-600' : 'bg-orange-100 text-orange-600'}`}>
-                      {event.eventType === 'page_view' ? <Users className="h-4 w-4" /> : <ShoppingCart className="h-4 w-4" />}
+                    <div className={`p-2 rounded-full ${
+                      event.eventType === 'page_view' ? 'bg-blue-100 text-blue-600' : 
+                      event.eventType === 'email_captured' ? 'bg-indigo-100 text-indigo-600' :
+                      'bg-orange-100 text-orange-600'
+                    }`}>
+                      {event.eventType === 'page_view' ? <Users className="h-4 w-4" /> : 
+                       event.eventType === 'email_captured' ? <Mail className="h-4 w-4" /> :
+                       <ShoppingCart className="h-4 w-4" />}
                     </div>
                     <div>
-                      <p className="font-medium text-sm">{event.eventType}</p>
+                      <p className="font-medium text-sm">
+                        {event.eventType === 'email_captured' && event.metadata 
+                          ? JSON.parse(event.metadata).email 
+                          : getEventName(event.eventType)}
+                      </p>
                       <p className={`text-xs text-muted-foreground dir-ltr ${language === 'ar' ? 'text-right' : 'text-left'} truncate max-w-[200px] sm:max-w-xs`}>{event.url}</p>
                     </div>
                   </div>

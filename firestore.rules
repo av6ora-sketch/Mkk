@@ -78,12 +78,13 @@ service cloud.firestore {
     }
 
     function isValidStore(data) {
-      return hasOnlyAllowedFields(['uid', 'name', 'domain', 'status', 'createdAt', 'isBanned']) &&
+      return hasOnlyAllowedFields(['uid', 'name', 'domain', 'status', 'createdAt', 'isBanned', 'platform']) &&
              data.uid is string && data.uid.size() > 0 && data.uid.size() < 100 &&
              data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
              data.domain is string && data.domain.size() > 0 && data.domain.size() < 200 &&
              data.status in ['pending', 'active'] &&
              (!('isBanned' in data) || data.isBanned is bool) &&
+             (!('platform' in data) || (data.platform is string && data.platform.size() < 100)) &&
              (data.createdAt is timestamp || data.createdAt is string);
     }
 
@@ -114,6 +115,16 @@ service cloud.firestore {
              data.senderRole in ['user', 'admin'] &&
              data.text is string && data.text.size() > 0 && data.text.size() < 5000 &&
              (data.createdAt is timestamp || data.createdAt is string);
+    }
+
+    function isValidSettings(data) {
+      return hasOnlyAllowedFields(['smtp', 'updatedAt']) &&
+             (!('smtp' in data) || (data.smtp is map && 
+               (!('host' in data.smtp) || data.smtp.host is string) &&
+               (!('port' in data.smtp) || data.smtp.port is string) &&
+               (!('user' in data.smtp) || data.smtp.user is string) &&
+               (!('pass' in data.smtp) || data.smtp.pass is string))) &&
+             (data.updatedAt is timestamp || data.updatedAt is string);
     }
 
     match /roles/{roleId} {
@@ -164,6 +175,10 @@ service cloud.firestore {
                       isValidMessage(request.resource.data) &&
                       request.resource.data.senderId == request.auth.uid;
       }
+    }
+
+    match /settings/{userId} {
+      allow read, write: if isOwner(userId) && isValidSettings(request.resource.data);
     }
   }
 }

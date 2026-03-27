@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
+import { useOutletContext } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/src/components/ui/card";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
 import { Search, Edit, CheckCircle2, Loader2, Trash2, Ban } from "lucide-react";
-import { db } from "@/src/firebase";
+import { db, auth } from "@/src/firebase";
 import { collection, getDocs, doc, updateDoc, query, where, deleteDoc } from "firebase/firestore";
 import { useLanguage } from "../../contexts/LanguageContext";
 
@@ -30,6 +31,7 @@ import { handleFirestoreError, OperationType } from "@/src/lib/firestore-error";
 
 export default function AdminUsers() {
   const { language } = useLanguage();
+  const { permissions } = useOutletContext<{ permissions: Record<string, boolean> }>();
   const [users, setUsers] = useState<User[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
@@ -41,6 +43,7 @@ export default function AdminUsers() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   const fetchUsers = async () => {
+    if (!auth.currentUser) return;
     try {
       const usersSnap = await getDocs(collection(db, "users"));
       const usersData: User[] = [];
@@ -48,9 +51,16 @@ export default function AdminUsers() {
       for (const userDoc of usersSnap.docs) {
         const userData = userDoc.data();
         
-        // Count stores for this user
-        const qStores = query(collection(db, "stores"), where("uid", "==", userData.uid));
-        const storesSnap = await getDocs(qStores);
+        let storeCount = 0;
+        if (permissions.manage_stores) {
+          try {
+            const qStores = query(collection(db, "stores"), where("uid", "==", userData.uid));
+            const storesSnap = await getDocs(qStores);
+            storeCount = storesSnap.size;
+          } catch (e) {
+            console.error("Error fetching stores for user:", e);
+          }
+        }
         
         usersData.push({
           id: userDoc.id,
@@ -58,7 +68,7 @@ export default function AdminUsers() {
           name: userData.firstName ? `${userData.firstName} ${userData.lastName || ''}` : (language === 'ar' ? 'مستخدم' : 'User'),
           email: userData.email,
           plan: userData.plan || (language === 'ar' ? 'الأساسية' : 'Basic'),
-          stores: storesSnap.size,
+          stores: storeCount,
           status: userData.isBanned ? (language === 'ar' ? 'محظور' : 'Banned') : (language === 'ar' ? 'نشط' : 'Active'),
           isBanned: userData.isBanned,
           roleId: userData.roleId,
@@ -75,6 +85,7 @@ export default function AdminUsers() {
   };
 
   const fetchRoles = async () => {
+    if (!auth.currentUser) return;
     try {
       const rolesSnap = await getDocs(collection(db, "roles"));
       const rolesData: Role[] = [];

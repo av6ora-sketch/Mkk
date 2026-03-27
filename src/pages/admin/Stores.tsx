@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui/card";
 import { Button } from "@/src/components/ui/button";
 import { Store, ExternalLink, Loader2, Trash2, Ban, CheckCircle2 } from "lucide-react";
-import { db } from "@/src/firebase";
+import { db, auth } from "@/src/firebase";
 import { collection, getDocs, doc, deleteDoc, updateDoc } from "firebase/firestore";
 import { useLanguage } from "../../contexts/LanguageContext";
 
@@ -25,6 +25,7 @@ export default function AdminStores() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   const fetchStores = async () => {
+    if (!auth.currentUser) return;
     try {
       const querySnapshot = await getDocs(collection(db, "stores"));
       const storesData: StoreData[] = [];

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { useOutletContext } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/src/components/ui/card";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
@@ -30,6 +31,7 @@ interface Message {
 
 export default function AdminSupport() {
   const { language } = useLanguage();
+  const { permissions } = useOutletContext<{ permissions: Record<string, boolean> }>();
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -52,6 +54,7 @@ export default function AdminSupport() {
   }, [messages]);
 
   useEffect(() => {
+    if (!auth.currentUser) return;
     const q = query(
       collection(db, "tickets"),
       orderBy("updatedAt", "desc")
@@ -73,7 +76,7 @@ export default function AdminSupport() {
   }, []);
 
   useEffect(() => {
-    if (!selectedTicket) {
+    if (!selectedTicket || !auth.currentUser) {
       setMessages([]);
       setShowUserInfo(false);
       setTicketUser(null);
@@ -99,6 +102,7 @@ export default function AdminSupport() {
   }, [selectedTicket]);
 
   const fetchUserInfo = async (userId: string) => {
+    if (!permissions.manage_users) return;
     setUserLoading(true);
     try {
       const userDoc = await getDoc(doc(db, "users", userId));
@@ -115,7 +119,7 @@ export default function AdminSupport() {
   };
 
   const handleUserClick = () => {
-    if (selectedTicket) {
+    if (selectedTicket && permissions.manage_users) {
       if (!showUserInfo) {
         fetchUserInfo(selectedTicket.userId);
       }

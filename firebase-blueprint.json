@@ -179,6 +179,26 @@
         }
       },
       "required": ["senderId", "senderRole", "text", "createdAt"]
+    },
+    "Settings": {
+      "title": "Settings",
+      "description": "User specific settings",
+      "type": "object",
+      "properties": {
+        "smtp": {
+          "type": "object",
+          "properties": {
+            "host": { "type": "string" },
+            "port": { "type": "string" },
+            "user": { "type": "string" },
+            "pass": { "type": "string" }
+          }
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
     }
   },
   "firestore": {
@@ -211,6 +231,12 @@
         "$ref": "#/entities/Message"
       },
       "description": "The messages within a support ticket"
+    },
+    "/settings/{userId}": {
+      "schema": {
+        "$ref": "#/entities/Settings"
+      },
+      "description": "User specific settings"
     }
   }
 }

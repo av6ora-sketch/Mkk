@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
+import { useOutletContext } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui/card";
 import { Users, Store, BarChart3, TrendingUp, Loader2 } from "lucide-react";
-import { db } from "@/src/firebase";
+import { db, auth } from "@/src/firebase";
 import { collection, getDocs, query, orderBy, limit } from "firebase/firestore";
 import { useLanguage } from "../../contexts/LanguageContext";
 
@@ -9,6 +10,7 @@ import { handleFirestoreError, OperationType } from "@/src/lib/firestore-error";
 
 export default function AdminOverview() {
   const { language } = useLanguage();
+  const { permissions } = useOutletContext<{ permissions: Record<string, boolean> }>();
   const [loading, setLoading] = useState(true);
   const [userCount, setUserCount] = useState(0);
   const [storeCount, setStoreCount] = useState(0);
@@ -17,23 +19,30 @@ export default function AdminOverview() {
 
   useEffect(() => {
     const fetchAdminData = async () => {
+      if (!auth.currentUser) return;
       try {
-        const usersSnap = await getDocs(collection(db, "users"));
-        setUserCount(usersSnap.size);
+        if (permissions.manage_users) {
+          const usersSnap = await getDocs(collection(db, "users"));
+          setUserCount(usersSnap.size);
+        }
 
-        const storesSnap = await getDocs(collection(db, "stores"));
-        setStoreCount(storesSnap.size);
+        if (permissions.manage_stores) {
+          const storesSnap = await getDocs(collection(db, "stores"));
+          setStoreCount(storesSnap.size);
 
-        const eventsSnap = await getDocs(collection(db, "events"));
-        setEventCount(eventsSnap.size);
+          const qRecentStores = query(collection(db, "stores"), orderBy("createdAt", "desc"), limit(5));
+          const recentStoresSnap = await getDocs(qRecentStores);
+          const recentStoresData: any[] = [];
+          recentStoresSnap.forEach(doc => {
+            recentStoresData.push({ id: doc.id, ...doc.data() });
+          });
+          setRecentStores(recentStoresData);
+        }
 
-        const qRecentStores = query(collection(db, "stores"), orderBy("createdAt", "desc"), limit(5));
-        const recentStoresSnap = await getDocs(qRecentStores);
-        const recentStoresData: any[] = [];
-        recentStoresSnap.forEach(doc => {
-          recentStoresData.push({ id: doc.id, ...doc.data() });
-        });
-        setRecentStores(recentStoresData);
+        if (permissions.view_reports) {
+          const eventsSnap = await getDocs(collection(db, "events"));
+          setEventCount(eventsSnap.size);
+        }
 
       } catch (error) {
         handleFirestoreError(error, OperationType.LIST, "admin_overview");
@@ -43,13 +52,13 @@ export default function AdminOverview() {
     };
 
     fetchAdminData();
-  }, []);
+  }, [permissions]);
 
   const stats = [
-    { title: language === 'ar' ? "إجمالي المستخدمين" : "Total Users", value: userCount.toLocaleString(), icon: Users, color: "text-blue-500" },
-    { title: language === 'ar' ? "المتاجر المربوطة" : "Connected Stores", value: storeCount.toLocaleString(), icon: Store, color: "text-green-500" },
-    { title: language === 'ar' ? "التحليلات المسجلة" : "Recorded Analytics", value: eventCount.toLocaleString(), icon: BarChart3, color: "text-purple-500" },
-    { title: language === 'ar' ? "النمو الشهري" : "Monthly Growth", value: "+15%", icon: TrendingUp, color: "text-orange-500" },
+    ...(permissions.manage_users ? [{ title: language === 'ar' ? "إجمالي المستخدمين" : "Total Users", value: userCount.toLocaleString(), icon: Users, color: "text-blue-500" }] : []),
+    ...(permissions.manage_stores ? [{ title: language === 'ar' ? "المتاجر المربوطة" : "Connected Stores", value: storeCount.toLocaleString(), icon: Store, color: "text-green-500" }] : []),
+    ...(permissions.view_reports ? [{ title: language === 'ar' ? "التحليلات المسجلة" : "Recorded Analytics", value: eventCount.toLocaleString(), icon: BarChart3, color: "text-purple-500" }] : []),
+    ...(permissions.view_reports ? [{ title: language === 'ar' ? "النمو الشهري" : "Monthly Growth", value: "+15%", icon: TrendingUp, color: "text-orange-500" }] : []),
   ];
 
   if (loading) {
@@ -79,45 +88,49 @@ export default function AdminOverview() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
-        <Card>
-          <CardHeader>
-            <CardTitle>{language === 'ar' ? "نمو المستخدمين والمتاجر" : "Users and Stores Growth"}</CardTitle>
-          </CardHeader>
-          <CardContent className="h-80 flex items-center justify-center bg-muted/20 rounded-md border border-dashed border-border m-6 mt-0">
-            <span className="text-muted-foreground">{language === 'ar' ? "رسم بياني يوضح النمو" : "Graph showing growth"}</span>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>{language === 'ar' ? "أحدث المتاجر المضافة" : "Latest Added Stores"}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {recentStores.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                {language === 'ar' ? "لا توجد متاجر مضافة بعد." : "No stores added yet."}
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {recentStores.map((store, i) => (
-                  <div key={i} className="flex justify-between items-center p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors">
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                        <Store className="h-5 w-5 text-primary" />
+        {permissions.view_reports && (
+          <Card>
+            <CardHeader>
+              <CardTitle>{language === 'ar' ? "نمو المستخدمين والمتاجر" : "Users and Stores Growth"}</CardTitle>
+            </CardHeader>
+            <CardContent className="h-80 flex items-center justify-center bg-muted/20 rounded-md border border-dashed border-border m-6 mt-0">
+              <span className="text-muted-foreground">{language === 'ar' ? "رسم بياني يوضح النمو" : "Graph showing growth"}</span>
+            </CardContent>
+          </Card>
+        )}
+        {permissions.manage_stores && (
+          <Card>
+            <CardHeader>
+              <CardTitle>{language === 'ar' ? "أحدث المتاجر المضافة" : "Latest Added Stores"}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {recentStores.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  {language === 'ar' ? "لا توجد متاجر مضافة بعد." : "No stores added yet."}
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {recentStores.map((store, i) => (
+                    <div key={i} className="flex justify-between items-center p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                          <Store className="h-5 w-5 text-primary" />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-sm">{store.name}</p>
+                          <p className="text-xs text-muted-foreground">{store.domain}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-semibold text-sm">{store.name}</p>
-                        <p className="text-xs text-muted-foreground">{store.domain}</p>
-                      </div>
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(store.createdAt).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US')}
+                      </span>
                     </div>
-                    <span className="text-xs text-muted-foreground">
-                      {new Date(store.createdAt).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US')}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );

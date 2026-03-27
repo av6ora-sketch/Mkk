@@ -30,6 +30,7 @@ const translations: Record<Language, Record<string, string>> = {
     'sidebar.plans': 'Plans',
     'sidebar.profile': 'Profile',
     'sidebar.support': 'Support',
+    'sidebar.settings': 'Settings',
     
     // Profile
     'profile.title': 'My Profile',
@@ -165,6 +166,7 @@ const translations: Record<Language, Record<string, string>> = {
     'sidebar.plans': 'الباقات',
     'sidebar.profile': 'حسابي',
     'sidebar.support': 'الدعم الفني',
+    'sidebar.settings': 'الإعدادات',
     
     // Profile
     'profile.title': 'حسابي',

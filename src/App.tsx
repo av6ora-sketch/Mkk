@@ -3,76 +3,88 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { Suspense, lazy } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { LanguageProvider } from "./contexts/LanguageContext";
+import { Loader2 } from "lucide-react";
+
+// Layouts (Keep these static to prevent layout shift)
 import MainLayout from "./components/layout/MainLayout";
 import DashboardLayout from "./components/layout/DashboardLayout";
 import AdminLayout from "./components/layout/AdminLayout";
 
-// Pages
-import Home from "./pages/Home";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
-import Privacy from "./pages/Privacy";
-import Terms from "./pages/Terms";
+// Lazy Loaded Pages
+const Home = lazy(() => import("./pages/Home"));
+const Login = lazy(() => import("./pages/Login"));
+const Register = lazy(() => import("./pages/Register"));
+const Privacy = lazy(() => import("./pages/Privacy"));
+const Terms = lazy(() => import("./pages/Terms"));
 
-// Dashboard Pages
-import DashboardOverview from "./pages/dashboard/Overview";
-import DashboardStores from "./pages/dashboard/Stores";
-import StoreDetails from "./pages/dashboard/StoreDetails";
-import DashboardAnalytics from "./pages/dashboard/Analytics";
-import DashboardReports from "./pages/dashboard/Reports";
-import DashboardPlans from "./pages/dashboard/Plans";
-import DashboardProfile from "./pages/dashboard/Profile";
-import DashboardSupport from "./pages/dashboard/Support";
+// Lazy Loaded Dashboard Pages
+const DashboardOverview = lazy(() => import("./pages/dashboard/Overview"));
+const DashboardStores = lazy(() => import("./pages/dashboard/Stores"));
+const StoreDetails = lazy(() => import("./pages/dashboard/StoreDetails"));
+const DashboardAnalytics = lazy(() => import("./pages/dashboard/Analytics"));
+const DashboardReports = lazy(() => import("./pages/dashboard/Reports"));
+const DashboardPlans = lazy(() => import("./pages/dashboard/Plans"));
+const DashboardProfile = lazy(() => import("./pages/dashboard/Profile"));
+const DashboardSupport = lazy(() => import("./pages/dashboard/Support"));
 
-// Admin Pages
-import AdminOverview from "./pages/admin/Overview";
-import AdminUsers from "./pages/admin/Users";
-import AdminStores from "./pages/admin/Stores";
-import AdminReports from "./pages/admin/Reports";
-import AdminProfile from "./pages/admin/Profile";
+// Lazy Loaded Admin Pages
+const AdminOverview = lazy(() => import("./pages/admin/Overview"));
+const AdminUsers = lazy(() => import("./pages/admin/Users"));
+const AdminStores = lazy(() => import("./pages/admin/Stores"));
+const AdminReports = lazy(() => import("./pages/admin/Reports"));
+const AdminProfile = lazy(() => import("./pages/admin/Profile"));
+
+const LoadingFallback = () => (
+  <div className="min-h-screen flex items-center justify-center bg-background">
+    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+  </div>
+);
 
 export default function App() {
   return (
     <LanguageProvider>
       <BrowserRouter>
-        <Routes>
-          {/* Public Routes */}
-          <Route path="/" element={<MainLayout />}>
-            <Route index element={<Home />} />
-            <Route path="privacy" element={<Privacy />} />
-            <Route path="terms" element={<Terms />} />
-          </Route>
-          
-          {/* Auth Routes */}
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
+        <Suspense fallback={<LoadingFallback />}>
+          <Routes>
+            {/* Public Routes */}
+            <Route path="/" element={<MainLayout />}>
+              <Route index element={<Home />} />
+              <Route path="privacy" element={<Privacy />} />
+              <Route path="terms" element={<Terms />} />
+            </Route>
+            
+            {/* Auth Routes */}
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
 
-          {/* User Dashboard Routes */}
-          <Route path="/dashboard" element={<DashboardLayout />}>
-            <Route index element={<DashboardOverview />} />
-            <Route path="stores" element={<DashboardStores />} />
-            <Route path="stores/:storeId" element={<StoreDetails />} />
-            <Route path="analytics" element={<DashboardAnalytics />} />
-            <Route path="reports" element={<DashboardReports />} />
-            <Route path="plans" element={<DashboardPlans />} />
-            <Route path="profile" element={<DashboardProfile />} />
-            <Route path="support" element={<DashboardSupport />} />
-          </Route>
+            {/* User Dashboard Routes */}
+            <Route path="/dashboard" element={<DashboardLayout />}>
+              <Route index element={<DashboardOverview />} />
+              <Route path="stores" element={<DashboardStores />} />
+              <Route path="stores/:storeId" element={<StoreDetails />} />
+              <Route path="analytics" element={<DashboardAnalytics />} />
+              <Route path="reports" element={<DashboardReports />} />
+              <Route path="plans" element={<DashboardPlans />} />
+              <Route path="profile" element={<DashboardProfile />} />
+              <Route path="support" element={<DashboardSupport />} />
+            </Route>
 
-          {/* Admin Dashboard Routes */}
-          <Route path="/admin" element={<AdminLayout />}>
-            <Route index element={<AdminOverview />} />
-            <Route path="users" element={<AdminUsers />} />
-            <Route path="stores" element={<AdminStores />} />
-            <Route path="reports" element={<AdminReports />} />
-            <Route path="profile" element={<AdminProfile />} />
-          </Route>
+            {/* Admin Dashboard Routes */}
+            <Route path="/admin" element={<AdminLayout />}>
+              <Route index element={<AdminOverview />} />
+              <Route path="users" element={<AdminUsers />} />
+              <Route path="stores" element={<AdminStores />} />
+              <Route path="reports" element={<AdminReports />} />
+              <Route path="profile" element={<AdminProfile />} />
+            </Route>
 
-          {/* Fallback */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+            {/* Fallback */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Suspense>
       </BrowserRouter>
     </LanguageProvider>
   );

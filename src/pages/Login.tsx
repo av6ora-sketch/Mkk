@@ -59,8 +59,9 @@ export default function Login() {
         setError(language === 'ar' ? "فشل الاتصال بالشبكة. يرجى التحقق من اتصالك بالإنترنت أو تعطيل مانع الإعلانات." : "Network request failed. Please check your internet connection or disable ad-blockers.");
       } else if (err.code === 'auth/popup-blocked') {
         setError(language === 'ar' ? "تم حظر النافذة المنبثقة. يرجى السماح بالنوافذ المنبثقة لهذا الموقع." : "Popup blocked. Please allow popups for this site.");
-      } else if (err.code === 'auth/cancelled-popup-request') {
+      } else if (err.code === 'auth/cancelled-popup-request' || err.code === 'auth/popup-closed-by-user') {
         // User closed the popup, don't show error
+        console.log("Popup closed by user");
       } else {
         setError(language === 'ar' ? "حدث خطأ أثناء تسجيل الدخول بواسطة جوجل." : "An error occurred during Google login.");
       }

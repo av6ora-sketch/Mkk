@@ -157,13 +157,22 @@ export default function StoreDetails() {
       if (metadata) {
         payload.fields.metadata = { stringValue: JSON.stringify(metadata) };
       }
-      fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      }).then(function() {
-        console.log('Avbora Tracked:', eventType, metadata || '');
-      }).catch(function(e){console.error('Tracking error', e)});
+      
+      var body = JSON.stringify(payload);
+      
+      // Use sendBeacon for more reliability on page exit/redirect
+      if (navigator.sendBeacon) {
+        navigator.sendBeacon(endpoint, body);
+        console.log('Avbora Tracked (Beacon):', eventType, metadata || '');
+      } else {
+        fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: body
+        }).then(function() {
+          console.log('Avbora Tracked:', eventType, metadata || '');
+        }).catch(function(e){console.error('Tracking error', e)});
+      }
     }
 
     window.AvboraTrack = track;
@@ -178,13 +187,15 @@ export default function StoreDetails() {
       var lowerText = text.toLowerCase().trim();
       
       // Add to Cart detection
-      var cartKeywords = ['أضف للسلة', 'add to cart', 'إضافة للسلة', 'أضف إلى السلة', 'إضافة إلى السلة', 'سلة المشتريات', 'buy now', 'اشتري الآن', 'تسوق الآن', 'shop now'];
+      var cartKeywords = ['أضف للسلة', 'add to cart', 'إضافة للسلة', 'أضف إلى السلة', 'إضافة إلى السلة', 'سلة المشتريات', 'buy now', 'اشتري الآن', 'تسوق الآن', 'shop now', 'أضف إلى العربة', 'أضف للعربة'];
       var isCart = cartKeywords.some(function(kw) { return lowerText.includes(kw); });
       
       // Check ID and Class for cart keywords if text doesn't match
       if (!isCart) {
         var idOrClass = (target.id + ' ' + target.className).toLowerCase();
-        isCart = ['add-to-cart', 'add_to_cart', 'add-cart', 'btn-cart'].some(function(kw) { return idOrClass.includes(kw); });
+        var odooClasses = ['js_check_product', 'a-submit', 'add_to_cart_button', 'product_add_to_cart'];
+        isCart = ['add-to-cart', 'add_to_cart', 'add-cart', 'btn-cart', 'cart-btn'].some(function(kw) { return idOrClass.includes(kw); }) ||
+                 odooClasses.some(function(kw) { return idOrClass.includes(kw); });
       }
       
       if (isCart) {
@@ -264,8 +275,8 @@ export default function StoreDetails() {
           : "In Zid, go to Settings > Custom Codes, and add a new code in the Head section.";
       case "odoo":
         return language === 'ar'
-          ? "في أودو، اذهب إلى Website > Configuration > Settings، وابحث عن 'Custom Code' أو قم بتعديل قالب HTML الرئيسي لإضافة الكود في الـ Head."
-          : "In Odoo, go to Website > Configuration > Settings, look for 'Custom Code' or edit the main HTML template to add the code in the Head.";
+          ? "في أودو، اذهب إلى Website > Configuration > Settings، وابحث عن 'Custom Code' وألصق الكود في 'Head Code'. أو اذهب إلى Site > HTML/CSS Editor وقم بتعديل القالب الرئيسي."
+          : "In Odoo, go to Website > Configuration > Settings, look for 'Custom Code' and paste the code in 'Head Code'. Alternatively, go to Site > HTML/CSS Editor and edit the main layout.";
       default:
         return language === 'ar'
           ? "لم نستقبل أي بيانات من متجرك حتى الآن. يرجى التأكد من إضافة كود التتبع التالي في وسم <code>&lt;head&gt;</code> في جميع صفحات متجرك."

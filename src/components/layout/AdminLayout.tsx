@@ -48,8 +48,8 @@ export default function AdminLayout() {
         } else {
           try {
             const userDoc = await getDoc(doc(db, 'users', user.uid));
-            if (userDoc.exists() && userDoc.data().permissions) {
-              setPermissions(userDoc.data().permissions);
+            if (userDoc.exists() && userDoc.data().role === 'admin') {
+              setPermissions(userDoc.data().permissions || {});
               setIsLoading(false);
             } else {
               navigate('/dashboard');
@@ -64,6 +64,24 @@ export default function AdminLayout() {
 
     return () => unsubscribe();
   }, [navigate]);
+
+  useEffect(() => {
+    if (isLoading) return;
+
+    const path = location.pathname;
+    
+    if (path.startsWith('/admin/users') && !permissions.manage_users) {
+      navigate('/admin');
+    } else if (path.startsWith('/admin/stores') && !permissions.manage_stores) {
+      navigate('/admin');
+    } else if (path.startsWith('/admin/reports') && !permissions.view_reports) {
+      navigate('/admin');
+    } else if (path.startsWith('/admin/support') && !permissions.manage_support) {
+      navigate('/admin');
+    } else if (path.startsWith('/admin/roles') && !permissions.manage_roles) {
+      navigate('/admin');
+    }
+  }, [location.pathname, isLoading, permissions, navigate]);
 
   const handleLogout = async () => {
     await signOut(auth);

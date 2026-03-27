@@ -37,6 +37,7 @@ const AdminStores = lazy(() => import("./pages/admin/Stores"));
 const AdminReports = lazy(() => import("./pages/admin/Reports"));
 const AdminProfile = lazy(() => import("./pages/admin/Profile"));
 const AdminSupport = lazy(() => import("./pages/admin/Support"));
+const AdminRoles = lazy(() => import("./pages/admin/Roles"));
 
 const LoadingFallback = () => (
   <div className="min-h-screen flex items-center justify-center bg-background">
@@ -81,6 +82,7 @@ export default function App() {
               <Route path="reports" element={<AdminReports />} />
               <Route path="profile" element={<AdminProfile />} />
               <Route path="support" element={<AdminSupport />} />
+              <Route path="roles" element={<AdminRoles />} />
             </Route>
 
             {/* Fallback */}

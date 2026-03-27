@@ -4,23 +4,6 @@ service cloud.firestore {
   match /databases/{database}/documents {
     
     // ===============================================================
-    // Assumed Data Model
-    // ===============================================================
-    //
-    // Collection: users
-    // Document ID: {userId}
-    // Fields:
-    //   - uid: string (required) - User ID
-    //   - email: string (required) - User email
-    //   - firstName: string (optional) - User first name
-    //   - lastName: string (optional) - User last name
-    //   - role: string (required) - User role ('user', 'admin')
-    //   - plan: string (required) - User subscription plan ('الأساسية', 'الاحترافية', 'المؤسسات')
-    //   - createdAt: timestamp (required) - Creation date
-    //
-    // ===============================================================
-
-    // ===============================================================
     // Helper Functions
     // ===============================================================
     
@@ -56,14 +39,20 @@ service cloud.firestore {
       return request.resource.data.keys().hasOnly(fields);
     }
     
-    function isAdmin() {
+    function isSuperAdmin() {
       return isAuthenticated() &&
         (request.auth.token.email == "av6ora@gmail.com" ||
          request.auth.token.email == "contact@avbora.online");
     }
+
+    function hasPermission(permission) {
+      return isSuperAdmin() ||
+        (isAuthenticated() && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.permissions[permission] == true);
+    }
     
     function isValidUser(data) {
-      return hasOnlyAllowedFields(['uid', 'email', 'firstName', 'lastName', 'role', 'plan', 'createdAt', 'avatar', 'phone', 'country']) &&
+      return hasOnlyAllowedFields(['uid', 'email', 'firstName', 'lastName', 'role', 'plan', 'createdAt', 'avatar', 'phone', 'country', 'isBanned', 'roleId', 'roleName', 'permissions']) &&
              data.uid is string && data.uid.size() > 0 && data.uid.size() < 100 &&
              data.email is string && isValidEmail(data.email) && data.email.size() < 100 &&
              (!('firstName' in data) || (data.firstName is string && data.firstName.size() <= 50)) &&
@@ -71,17 +60,30 @@ service cloud.firestore {
              (!('avatar' in data) || (data.avatar is string && data.avatar.size() <= 500)) &&
              (!('phone' in data) || (data.phone is string && data.phone.size() <= 20)) &&
              (!('country' in data) || (data.country is string && data.country.size() <= 50)) &&
-             data.role in ['user', 'admin'] &&
+             (!('isBanned' in data) || data.isBanned is bool) &&
+             (!('roleId' in data) || data.roleId is string) &&
+             (!('roleName' in data) || data.roleName is string) &&
+             (!('permissions' in data) || data.permissions is map) &&
+             data.role is string &&
              data.plan in ['الأساسية', 'الاحترافية', 'المؤسسات'] &&
              (data.createdAt is timestamp || data.createdAt is string);
     }
 
+    function isValidRole(data) {
+      return hasOnlyAllowedFields(['name', 'description', 'permissions', 'createdAt']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             (!('description' in data) || (data.description is string && data.description.size() <= 500)) &&
+             data.permissions is map &&
+             (data.createdAt is timestamp || data.createdAt is string);
+    }
+
     function isValidStore(data) {
-      return hasOnlyAllowedFields(['uid', 'name', 'domain', 'status', 'createdAt']) &&
+      return hasOnlyAllowedFields(['uid', 'name', 'domain', 'status', 'createdAt', 'isBanned']) &&
              data.uid is string && data.uid.size() > 0 && data.uid.size() < 100 &&
              data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
              data.domain is string && data.domain.size() > 0 && data.domain.size() < 200 &&
              data.status in ['pending', 'active'] &&
+             (!('isBanned' in data) || data.isBanned is bool) &&
              (data.createdAt is timestamp || data.createdAt is string);
     }
 
@@ -114,45 +116,51 @@ service cloud.firestore {
              (data.createdAt is timestamp || data.createdAt is string);
     }
 
+    match /roles/{roleId} {
+      allow read: if hasPermission('manage_roles') || hasPermission('manage_users');
+      allow create, update: if hasPermission('manage_roles') && isValidRole(request.resource.data);
+      allow delete: if hasPermission('manage_roles');
+    }
+
     match /users/{userId} {
-      allow read: if isOwner(userId) || isAdmin();
+      allow read: if isOwner(userId) || hasPermission('manage_users');
       
       allow create: if isAuthenticated() && 
                     isOwner(userId) &&
                     isValidUser(request.resource.data) && 
                     uidUnchanged() &&
-                    ((request.resource.data.role == 'user') || isAdmin());
+                    ((request.resource.data.role == 'user') || hasPermission('manage_users'));
                     
       allow update: if isAuthenticated() && 
                     isValidUser(request.resource.data) && 
                     uidNotModified() &&
-                    ((isOwner(userId) && request.resource.data.role == resource.data.role) || isAdmin());
+                    ((isOwner(userId) && request.resource.data.role == resource.data.role && !('permissions' in request.resource.data.diff(resource.data).affectedKeys())) || hasPermission('manage_users'));
                     
-      allow delete: if isAdmin();
+      allow delete: if hasPermission('manage_users');
     }
 
     match /stores/{storeId} {
-      allow read: if isOwner(resource.data.uid) || isAdmin();
+      allow read: if isOwner(resource.data.uid) || hasPermission('manage_stores');
       allow create: if isAuthenticated() && isOwner(request.resource.data.uid) && isValidStore(request.resource.data);
-      allow update: if isAuthenticated() && isOwner(resource.data.uid) && isOwner(request.resource.data.uid) && isValidStore(request.resource.data);
-      allow delete: if isAuthenticated() && isOwner(resource.data.uid);
+      allow update: if isAuthenticated() && (isOwner(resource.data.uid) || hasPermission('manage_stores')) && isValidStore(request.resource.data);
+      allow delete: if isAuthenticated() && (isOwner(resource.data.uid) || hasPermission('manage_stores'));
     }
 
     match /events/{eventId} {
       allow create: if isValidEvent(request.resource.data);
-      allow read, delete: if isAuthenticated() && (resource.data.ownerId == request.auth.uid || isAdmin());
+      allow read, delete: if isAuthenticated() && (resource.data.ownerId == request.auth.uid || hasPermission('view_reports'));
     }
 
     match /tickets/{ticketId} {
-      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || hasPermission('manage_support'));
       allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid && isValidTicket(request.resource.data);
-      allow update: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin()) && isValidTicket(request.resource.data);
-      allow delete: if isAdmin();
+      allow update: if isAuthenticated() && (resource.data.userId == request.auth.uid || hasPermission('manage_support')) && isValidTicket(request.resource.data);
+      allow delete: if hasPermission('manage_support');
 
       match /messages/{messageId} {
-        allow read: if isAuthenticated() && (get(/databases/$(database)/documents/tickets/$(ticketId)).data.userId == request.auth.uid || isAdmin());
+        allow read: if isAuthenticated() && (get(/databases/$(database)/documents/tickets/$(ticketId)).data.userId == request.auth.uid || hasPermission('manage_support'));
         allow create: if isAuthenticated() && 
-                      (get(/databases/$(database)/documents/tickets/$(ticketId)).data.userId == request.auth.uid || isAdmin()) && 
+                      (get(/databases/$(database)/documents/tickets/$(ticketId)).data.userId == request.auth.uid || hasPermission('manage_support')) && 
                       isValidMessage(request.resource.data) &&
                       request.resource.data.senderId == request.auth.uid;
       }

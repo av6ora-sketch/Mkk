@@ -2,10 +2,10 @@ import React, { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/src/components/ui/card";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
-import { MessageSquare, LifeBuoy, Send, Loader2, X, MessageCircle, CheckCircle2, RotateCcw, User } from "lucide-react";
+import { MessageSquare, LifeBuoy, Send, Loader2, X, MessageCircle, CheckCircle2, RotateCcw, User, Ban, Trash2, AlertTriangle } from "lucide-react";
 import { useLanguage } from "../../contexts/LanguageContext";
 import { db, auth } from "@/src/firebase";
-import { collection, query, onSnapshot, orderBy, serverTimestamp, doc, updateDoc, addDoc } from "firebase/firestore";
+import { collection, query, onSnapshot, orderBy, serverTimestamp, doc, updateDoc, addDoc, getDoc, deleteDoc } from "firebase/firestore";
 import { handleFirestoreError, OperationType } from "@/src/lib/firestore-error";
 import { cn } from "@/src/lib/utils";
 
@@ -37,6 +37,10 @@ export default function AdminSupport() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [showUserInfo, setShowUserInfo] = useState(false);
+  const [ticketUser, setTicketUser] = useState<any>(null);
+  const [userLoading, setUserLoading] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -71,6 +75,8 @@ export default function AdminSupport() {
   useEffect(() => {
     if (!selectedTicket) {
       setMessages([]);
+      setShowUserInfo(false);
+      setTicketUser(null);
       return;
     }
 
@@ -91,6 +97,67 @@ export default function AdminSupport() {
 
     return () => unsubscribeMessages();
   }, [selectedTicket]);
+
+  const fetchUserInfo = async (userId: string) => {
+    setUserLoading(true);
+    try {
+      const userDoc = await getDoc(doc(db, "users", userId));
+      if (userDoc.exists()) {
+        setTicketUser({ id: userDoc.id, ...userDoc.data() });
+      } else {
+        setTicketUser(null);
+      }
+    } catch (error) {
+      handleFirestoreError(error, OperationType.GET, `users/${userId}`);
+    } finally {
+      setUserLoading(false);
+    }
+  };
+
+  const handleUserClick = () => {
+    if (selectedTicket) {
+      if (!showUserInfo) {
+        fetchUserInfo(selectedTicket.userId);
+      }
+      setShowUserInfo(!showUserInfo);
+    }
+  };
+
+  const handleBanUser = async () => {
+    if (!ticketUser || !selectedTicket) return;
+    if (!window.confirm(language === 'ar' ? 'هل أنت متأكد من حظر هذا المستخدم مؤقتاً؟' : 'Are you sure you want to temporarily ban this user?')) return;
+    
+    setActionLoading(true);
+    try {
+      const isBanned = !ticketUser.isBanned;
+      await updateDoc(doc(db, "users", ticketUser.id), {
+        isBanned: isBanned
+      });
+      setTicketUser({ ...ticketUser, isBanned });
+      alert(language === 'ar' ? `تم ${isBanned ? 'حظر' : 'إلغاء حظر'} المستخدم بنجاح.` : `User successfully ${isBanned ? 'banned' : 'unbanned'}.`);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `users/${ticketUser.id}`);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleDeleteUser = async () => {
+    if (!ticketUser || !selectedTicket) return;
+    if (!window.confirm(language === 'ar' ? 'تحذير: هل أنت متأكد من حذف هذا المستخدم نهائياً؟ هذا الإجراء لا يمكن التراجع عنه.' : 'WARNING: Are you sure you want to permanently delete this user? This action cannot be undone.')) return;
+    
+    setActionLoading(true);
+    try {
+      await deleteDoc(doc(db, "users", ticketUser.id));
+      alert(language === 'ar' ? 'تم حذف المستخدم بنجاح.' : 'User successfully deleted.');
+      setShowUserInfo(false);
+      setTicketUser(null);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `users/${ticketUser.id}`);
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -209,15 +276,96 @@ export default function AdminSupport() {
         <div className="lg:col-span-8">
           {selectedTicket ? (
             <Card className="h-[700px] flex flex-col">
-              <CardHeader className="border-b border-border py-4 flex flex-row items-center justify-between">
+              <CardHeader className="border-b border-border py-4 flex flex-row items-center justify-between relative">
                 <div>
                   <CardTitle className="text-lg">{selectedTicket.subject}</CardTitle>
                   <div className="flex items-center gap-2 mt-1">
-                    <span className="text-xs text-muted-foreground">
+                    <button 
+                      onClick={handleUserClick}
+                      className="text-xs text-muted-foreground hover:text-primary transition-colors flex items-center gap-1"
+                    >
+                      <User className="h-3 w-3" />
                       {language === 'ar' ? 'المستخدم: ' : 'User: '} {selectedTicket.userName} ({selectedTicket.userEmail})
-                    </span>
+                    </button>
                   </div>
                 </div>
+                
+                {/* User Info Card Popup */}
+                {showUserInfo && (
+                  <div className="absolute top-full left-0 mt-2 w-80 bg-background border border-border rounded-lg shadow-xl z-50 p-4">
+                    <div className="flex justify-between items-start mb-4">
+                      <h4 className="font-semibold flex items-center gap-2">
+                        <User className="h-4 w-4 text-primary" />
+                        {language === 'ar' ? 'معلومات العميل' : 'Customer Info'}
+                      </h4>
+                      <button onClick={() => setShowUserInfo(false)} className="text-muted-foreground hover:text-foreground">
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                    
+                    {userLoading ? (
+                      <div className="flex justify-center py-4">
+                        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                      </div>
+                    ) : ticketUser ? (
+                      <div className="space-y-3 text-sm">
+                        <div>
+                          <span className="text-muted-foreground">{language === 'ar' ? 'الاسم:' : 'Name:'}</span>
+                          <p className="font-medium">{ticketUser.firstName} {ticketUser.lastName}</p>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">{language === 'ar' ? 'البريد الإلكتروني:' : 'Email:'}</span>
+                          <p className="font-medium">{ticketUser.email}</p>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">{language === 'ar' ? 'الخطة:' : 'Plan:'}</span>
+                          <p className="font-medium">{ticketUser.plan}</p>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">{language === 'ar' ? 'الحالة:' : 'Status:'}</span>
+                          <p className="font-medium flex items-center gap-2">
+                            {ticketUser.isBanned ? (
+                              <span className="text-red-600 flex items-center gap-1"><Ban className="h-3 w-3" /> {language === 'ar' ? 'محظور' : 'Banned'}</span>
+                            ) : (
+                              <span className="text-green-600 flex items-center gap-1"><CheckCircle2 className="h-3 w-3" /> {language === 'ar' ? 'نشط' : 'Active'}</span>
+                            )}
+                          </p>
+                        </div>
+                        
+                        <div className="pt-4 mt-4 border-t border-border flex flex-col gap-2">
+                          <Button 
+                            variant={ticketUser.isBanned ? "outline" : "destructive"} 
+                            size="sm" 
+                            className="w-full justify-start"
+                            onClick={handleBanUser}
+                            disabled={actionLoading}
+                          >
+                            {actionLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Ban className="h-4 w-4 mr-2" />}
+                            {ticketUser.isBanned 
+                              ? (language === 'ar' ? 'إلغاء الحظر' : 'Unban User') 
+                              : (language === 'ar' ? 'حظر مؤقت' : 'Temporary Ban')}
+                          </Button>
+                          <Button 
+                            variant="destructive" 
+                            size="sm" 
+                            className="w-full justify-start bg-red-700 hover:bg-red-800"
+                            onClick={handleDeleteUser}
+                            disabled={actionLoading}
+                          >
+                            {actionLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Trash2 className="h-4 w-4 mr-2" />}
+                            {language === 'ar' ? 'حذف العميل نهائياً' : 'Delete User Permanently'}
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-center py-4 text-muted-foreground flex flex-col items-center">
+                        <AlertTriangle className="h-8 w-8 mb-2 text-yellow-500" />
+                        <p>{language === 'ar' ? 'لم يتم العثور على بيانات المستخدم. قد يكون تم حذفه.' : 'User data not found. They may have been deleted.'}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <div className="flex items-center gap-2">
                   <Button 
                     variant="outline" 

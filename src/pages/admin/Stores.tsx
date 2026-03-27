@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui/card";
-import { Store, ExternalLink, Loader2 } from "lucide-react";
+import { Button } from "@/src/components/ui/button";
+import { Store, ExternalLink, Loader2, Trash2, Ban, CheckCircle2 } from "lucide-react";
 import { db } from "@/src/firebase";
-import { collection, getDocs } from "firebase/firestore";
+import { collection, getDocs, doc, deleteDoc, updateDoc } from "firebase/firestore";
 import { useLanguage } from "../../contexts/LanguageContext";
 
 interface StoreData {
@@ -12,6 +13,7 @@ interface StoreData {
   status: string;
   uid: string;
   createdAt: string;
+  isBanned?: boolean;
 }
 
 import { handleFirestoreError, OperationType } from "@/src/lib/firestore-error";
@@ -20,25 +22,59 @@ export default function AdminStores() {
   const { language } = useLanguage();
   const [stores, setStores] = useState<StoreData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  const fetchStores = async () => {
+    try {
+      const querySnapshot = await getDocs(collection(db, "stores"));
+      const storesData: StoreData[] = [];
+      querySnapshot.forEach((doc) => {
+        storesData.push({ id: doc.id, ...doc.data() } as StoreData);
+      });
+      setStores(storesData);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.LIST, "stores");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchStores = async () => {
-      try {
-        const querySnapshot = await getDocs(collection(db, "stores"));
-        const storesData: StoreData[] = [];
-        querySnapshot.forEach((doc) => {
-          storesData.push({ id: doc.id, ...doc.data() } as StoreData);
-        });
-        setStores(storesData);
-      } catch (error) {
-        handleFirestoreError(error, OperationType.LIST, "stores");
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchStores();
   }, []);
+
+  const handleDeleteStore = async (storeId: string) => {
+    if (!window.confirm(language === 'ar' ? 'هل أنت متأكد من حذف هذا المتجر نهائياً؟' : 'Are you sure you want to permanently delete this store?')) return;
+    
+    setActionLoading(storeId);
+    try {
+      await deleteDoc(doc(db, "stores", storeId));
+      setStores(stores.filter(store => store.id !== storeId));
+      alert(language === 'ar' ? 'تم حذف المتجر بنجاح.' : 'Store successfully deleted.');
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `stores/${storeId}`);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleBanStore = async (storeId: string, currentBanStatus: boolean | undefined) => {
+    const isBanned = !currentBanStatus;
+    if (!window.confirm(language === 'ar' ? `هل أنت متأكد من ${isBanned ? 'حظر' : 'إلغاء حظر'} هذا المتجر؟` : `Are you sure you want to ${isBanned ? 'ban' : 'unban'} this store?`)) return;
+    
+    setActionLoading(storeId);
+    try {
+      await updateDoc(doc(db, "stores", storeId), {
+        isBanned: isBanned
+      });
+      setStores(stores.map(store => store.id === storeId ? { ...store, isBanned } : store));
+      alert(language === 'ar' ? `تم ${isBanned ? 'حظر' : 'إلغاء حظر'} المتجر بنجاح.` : `Store successfully ${isBanned ? 'banned' : 'unbanned'}.`);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `stores/${storeId}`);
+    } finally {
+      setActionLoading(null);
+    }
+  };
 
   if (loading) {
     return (
@@ -78,8 +114,8 @@ export default function AdminStores() {
                       </p>
                     </div>
                   </div>
-                  <span className={`px-2.5 py-1 text-xs font-medium rounded-full ${store.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                    {store.status === 'active' ? (language === 'ar' ? 'نشط' : 'Active') : (language === 'ar' ? 'في انتظار الربط' : 'Pending')}
+                  <span className={`px-2.5 py-1 text-xs font-medium rounded-full ${store.isBanned ? 'bg-red-100 text-red-800' : store.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                    {store.isBanned ? (language === 'ar' ? 'محظور' : 'Banned') : store.status === 'active' ? (language === 'ar' ? 'نشط' : 'Active') : (language === 'ar' ? 'في انتظار الربط' : 'Pending')}
                   </span>
                 </div>
               </CardHeader>
@@ -92,6 +128,28 @@ export default function AdminStores() {
                   <div className="col-span-2">
                     <p className="text-xs text-muted-foreground mb-1">{language === 'ar' ? 'تاريخ الإضافة' : 'Date Added'}</p>
                     <p className="font-semibold text-sm">{new Date(store.createdAt).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US')}</p>
+                  </div>
+                  <div className="col-span-2 flex gap-2 pt-2 mt-2 border-t border-border">
+                    <Button 
+                      variant={store.isBanned ? "outline" : "secondary"} 
+                      size="sm" 
+                      className="flex-1"
+                      onClick={() => handleBanStore(store.id, store.isBanned)}
+                      disabled={actionLoading === store.id}
+                    >
+                      {actionLoading === store.id ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : (store.isBanned ? <CheckCircle2 className="h-4 w-4 mr-2" /> : <Ban className="h-4 w-4 mr-2" />)}
+                      {store.isBanned ? (language === 'ar' ? 'إلغاء الحظر' : 'Unban') : (language === 'ar' ? 'حظر' : 'Ban')}
+                    </Button>
+                    <Button 
+                      variant="destructive" 
+                      size="sm" 
+                      className="flex-1"
+                      onClick={() => handleDeleteStore(store.id)}
+                      disabled={actionLoading === store.id}
+                    >
+                      {actionLoading === store.id ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Trash2 className="h-4 w-4 mr-2" />}
+                      {language === 'ar' ? 'حذف' : 'Delete'}
+                    </Button>
                   </div>
                 </div>
               </CardContent>

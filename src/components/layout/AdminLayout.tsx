@@ -12,13 +12,15 @@ import {
   Menu,
   X,
   Loader2,
-  LifeBuoy
+  LifeBuoy,
+  Shield
 } from "lucide-react";
 import { cn } from "@/src/lib/utils";
 import { Button } from "@/src/components/ui/button";
 import { useLanguage } from "../../contexts/LanguageContext";
-import { auth } from "@/src/firebase";
+import { auth, db } from "@/src/firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
 
 export default function AdminLayout() {
   const location = useLocation();
@@ -26,15 +28,37 @@ export default function AdminLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const { language } = useLanguage();
   const [isLoading, setIsLoading] = useState(true);
+  const [permissions, setPermissions] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (!user) {
         navigate('/login');
-      } else if (user.email !== 'contact@avbora.online' && user.email !== 'av6ora@gmail.com') {
-        navigate('/dashboard');
       } else {
-        setIsLoading(false);
+        const isSuperAdmin = user.email === 'contact@avbora.online' || user.email === 'av6ora@gmail.com';
+        if (isSuperAdmin) {
+          setPermissions({
+            manage_users: true,
+            manage_stores: true,
+            manage_support: true,
+            view_reports: true,
+            manage_roles: true
+          });
+          setIsLoading(false);
+        } else {
+          try {
+            const userDoc = await getDoc(doc(db, 'users', user.uid));
+            if (userDoc.exists() && userDoc.data().permissions) {
+              setPermissions(userDoc.data().permissions);
+              setIsLoading(false);
+            } else {
+              navigate('/dashboard');
+            }
+          } catch (error) {
+            console.error("Error fetching user permissions:", error);
+            navigate('/dashboard');
+          }
+        }
       }
     });
 
@@ -47,13 +71,14 @@ export default function AdminLayout() {
   };
 
   const sidebarLinks = [
-    { name: language === 'ar' ? "نظرة عامة" : "Overview", href: "/admin", icon: LayoutDashboard },
-    { name: language === 'ar' ? "المستخدمين" : "Users", href: "/admin/users", icon: Users },
-    { name: language === 'ar' ? "المتاجر المربوطة" : "Connected Stores", href: "/admin/stores", icon: Store },
-    { name: language === 'ar' ? "التقارير" : "Reports", href: "/admin/reports", icon: FileText },
-    { name: language === 'ar' ? "تذاكر الدعم" : "Support Tickets", href: "/admin/support", icon: LifeBuoy },
-    { name: language === 'ar' ? "حساب المدير" : "Admin Profile", href: "/admin/profile", icon: User },
-  ];
+    { name: language === 'ar' ? "نظرة عامة" : "Overview", href: "/admin", icon: LayoutDashboard, show: true },
+    { name: language === 'ar' ? "المستخدمين" : "Users", href: "/admin/users", icon: Users, show: permissions.manage_users },
+    { name: language === 'ar' ? "المتاجر المربوطة" : "Connected Stores", href: "/admin/stores", icon: Store, show: permissions.manage_stores },
+    { name: language === 'ar' ? "التقارير" : "Reports", href: "/admin/reports", icon: FileText, show: permissions.view_reports },
+    { name: language === 'ar' ? "تذاكر الدعم" : "Support Tickets", href: "/admin/support", icon: LifeBuoy, show: permissions.manage_support },
+    { name: language === 'ar' ? "الأدوار والصلاحيات" : "Roles & Permissions", href: "/admin/roles", icon: Shield, show: permissions.manage_roles },
+    { name: language === 'ar' ? "حساب المدير" : "Admin Profile", href: "/admin/profile", icon: User, show: true },
+  ].filter(link => link.show);
 
   if (isLoading) {
     return (

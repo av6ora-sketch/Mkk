@@ -111,6 +111,14 @@
         "metadata": {
           "type": "string",
           "description": "Optional JSON string of additional data"
+        },
+        "sessionId": {
+          "type": "string",
+          "description": "The session ID of the user"
+        },
+        "email": {
+          "type": "string",
+          "description": "The captured email of the user"
         }
       },
       "required": ["storeId", "ownerId", "eventType", "url", "timestamp"]

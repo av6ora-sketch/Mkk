@@ -144,6 +144,8 @@ export default function StoreDetails() {
     var ownerId = "${auth.currentUser?.uid || ''}";
     var endpoint = "https://firestore.googleapis.com/v1/projects/" + projectId + "/databases/" + databaseId + "/documents/events?key=" + apiKey;
 
+    console.log('Avbora: Tracking initialized for store ' + storeId);
+
     // Session management
     var sessionId = localStorage.getItem('avbora_session_id');
     if (!sessionId) {
@@ -152,6 +154,11 @@ export default function StoreDetails() {
     }
 
     function track(eventType, metadata) {
+      if (!ownerId || !storeId) {
+        console.warn('Avbora: Missing configuration, tracking skipped.');
+        return;
+      }
+
       var payload = {
         fields: {
           storeId: { stringValue: storeId },
@@ -170,27 +177,38 @@ export default function StoreDetails() {
       }
 
       if (metadata) {
-        payload.fields.metadata = { stringValue: JSON.stringify(metadata) };
+        payload.fields.metadata = { stringValue: typeof metadata === 'string' ? metadata : JSON.stringify(metadata) };
       }
       
       var body = JSON.stringify(payload);
       
       // Use fetch with keepalive to ensure it's not cancelled on page unload
-      // and allows setting the correct Content-Type for Firestore REST API
-      fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: body,
-        keepalive: true
-      }).then(function() {
-        console.log('Avbora Tracked:', eventType, metadata || '');
-      }).catch(function(e){
-        console.error('Tracking error', e);
-        // Fallback to sendBeacon if fetch keepalive fails
+      if (window.fetch) {
+        fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: body,
+          keepalive: true
+        }).then(function() {
+          console.log('Avbora: Tracked ' + eventType);
+        }).catch(function(e){
+          console.error('Avbora: Tracking error', e);
+          fallback(body);
+        });
+      } else {
+        fallback(body);
+      }
+
+      function fallback(data) {
         if (navigator.sendBeacon) {
-          navigator.sendBeacon(endpoint, body);
+          navigator.sendBeacon(endpoint, data);
+        } else {
+          var xhr = new XMLHttpRequest();
+          xhr.open('POST', endpoint, true);
+          xhr.setRequestHeader('Content-Type', 'application/json');
+          xhr.send(data);
         }
-      });
+      }
     }
 
     window.AvboraTrack = track;
@@ -493,11 +511,24 @@ export default function StoreDetails() {
                     </div>
                     <div>
                       <p className="font-medium text-sm">
-                        {event.eventType === 'email_captured' && event.metadata 
-                          ? JSON.parse(event.metadata).email 
-                          : event.eventType === 'add_to_cart' && event.metadata && JSON.parse(event.metadata).product_id
-                          ? `${getEventName(event.eventType)} (${JSON.parse(event.metadata).product_id})`
-                          : getEventName(event.eventType)}
+                        {(() => {
+                          if (event.eventType === 'email_captured' && event.metadata) {
+                            try {
+                              return JSON.parse(event.metadata).email;
+                            } catch (e) {
+                              return event.metadata;
+                            }
+                          }
+                          if (event.eventType === 'add_to_cart' && event.metadata) {
+                            try {
+                              const meta = JSON.parse(event.metadata);
+                              if (meta.product_id) return `${getEventName(event.eventType)} (${meta.product_id})`;
+                            } catch (e) {
+                              // Fallback
+                            }
+                          }
+                          return getEventName(event.eventType);
+                        })()}
                       </p>
                       <p className={`text-xs text-muted-foreground dir-ltr ${language === 'ar' ? 'text-right' : 'text-left'} truncate max-w-[200px] sm:max-w-xs`}>{event.url}</p>
                     </div>

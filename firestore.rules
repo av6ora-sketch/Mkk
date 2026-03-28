@@ -41,6 +41,7 @@ service cloud.firestore {
     
     function isSuperAdmin() {
       return isAuthenticated() &&
+        request.auth.token.email_verified == true &&
         (request.auth.token.email == "av6ora@gmail.com" ||
          request.auth.token.email == "contact@avbora.online");
     }
@@ -48,6 +49,7 @@ service cloud.firestore {
     function hasPermission(permission) {
       return isSuperAdmin() ||
         (isAuthenticated() && 
+         exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.permissions[permission] == true);
     }
     
@@ -89,13 +91,15 @@ service cloud.firestore {
     }
 
     function isValidEvent(data) {
-      return hasOnlyAllowedFields(['storeId', 'ownerId', 'eventType', 'url', 'timestamp', 'metadata']) &&
+      return hasOnlyAllowedFields(['storeId', 'ownerId', 'eventType', 'url', 'timestamp', 'metadata', 'sessionId', 'email']) &&
              data.storeId is string && data.storeId.size() > 0 && data.storeId.size() < 100 &&
              data.ownerId is string && data.ownerId.size() > 0 && data.ownerId.size() < 100 &&
              data.eventType is string && data.eventType.size() > 0 && data.eventType.size() < 50 &&
-             data.url is string && data.url.size() > 0 && data.url.size() < 1000 &&
+             data.url is string && data.url.size() > 0 && data.url.size() < 2000 &&
              (data.timestamp is timestamp || data.timestamp is string) &&
-             (!('metadata' in data) || (data.metadata is string && data.metadata.size() < 5000));
+             (!('sessionId' in data) || (data.sessionId is string && data.sessionId.size() < 100)) &&
+             (!('email' in data) || (data.email is string && data.email.size() < 100)) &&
+             (!('metadata' in data) || (data.metadata is string && data.metadata.size() < 10000));
     }
 
     function isValidTicket(data) {
@@ -125,6 +129,10 @@ service cloud.firestore {
                (!('user' in data.smtp) || data.smtp.user is string) &&
                (!('pass' in data.smtp) || data.smtp.pass is string))) &&
              (data.updatedAt is timestamp || data.updatedAt is string);
+    }
+
+    match /test/connection {
+      allow read: if true;
     }
 
     match /roles/{roleId} {

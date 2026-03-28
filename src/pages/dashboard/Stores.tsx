@@ -144,28 +144,75 @@ export default function Stores() {
   (function() {
     var projectId = "${firebaseConfig.projectId}";
     var databaseId = "${firebaseConfig.firestoreDatabaseId}";
+    var apiKey = "${firebaseConfig.apiKey}";
     var storeId = "${newStoreId}";
     var ownerId = "${auth.currentUser?.uid || ''}";
-    var endpoint = "https://firestore.googleapis.com/v1/projects/" + projectId + "/databases/" + databaseId + "/documents/events";
+    var endpoint = "https://firestore.googleapis.com/v1/projects/" + projectId + "/databases/" + databaseId + "/documents/events?key=" + apiKey;
+
+    console.log('Avbora: Tracking initialized for store ' + storeId);
+
+    // Session management
+    var sessionId = localStorage.getItem('avbora_session_id');
+    if (!sessionId) {
+      sessionId = 'sess_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now();
+      localStorage.setItem('avbora_session_id', sessionId);
+    }
 
     function track(eventType, metadata) {
+      if (!ownerId || !storeId) {
+        console.warn('Avbora: Missing configuration, tracking skipped.');
+        return;
+      }
+
       var payload = {
         fields: {
           storeId: { stringValue: storeId },
           ownerId: { stringValue: ownerId },
           eventType: { stringValue: eventType },
+          sessionId: { stringValue: sessionId },
           url: { stringValue: window.location.href },
           timestamp: { timestampValue: new Date().toISOString() }
         }
       };
-      if (metadata) {
-        payload.fields.metadata = { stringValue: JSON.stringify(metadata) };
+      
+      // Include captured email if available in session
+      var savedEmail = localStorage.getItem('avbora_email');
+      if (savedEmail) {
+        payload.fields.email = { stringValue: savedEmail };
       }
-      fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      }).catch(function(e){console.error('Tracking error', e)});
+
+      if (metadata) {
+        payload.fields.metadata = { stringValue: typeof metadata === 'string' ? metadata : JSON.stringify(metadata) };
+      }
+      
+      var body = JSON.stringify(payload);
+      
+      if (window.fetch) {
+        fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: body,
+          keepalive: true
+        }).then(function() {
+          console.log('Avbora: Tracked ' + eventType);
+        }).catch(function(e){
+          console.error('Avbora: Tracking error', e);
+          fallback(body);
+        });
+      } else {
+        fallback(body);
+      }
+
+      function fallback(data) {
+        if (navigator.sendBeacon) {
+          navigator.sendBeacon(endpoint, data);
+        } else {
+          var xhr = new XMLHttpRequest();
+          xhr.open('POST', endpoint, true);
+          xhr.setRequestHeader('Content-Type', 'application/json');
+          xhr.send(data);
+        }
+      }
     }
 
     window.AvboraTrack = track;

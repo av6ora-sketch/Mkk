@@ -17,13 +17,18 @@ const __dirname = path.dirname(__filename);
 const firebaseConfig = JSON.parse(fs.readFileSync(path.join(__dirname, "firebase-applet-config.json"), "utf8"));
 
 // Initialize Firebase Admin
-if (getApps().length === 0) {
-  initializeApp({
-    projectId: firebaseConfig.projectId,
-  });
-}
+const adminApp = getApps().length === 0 
+  ? initializeApp({
+      projectId: firebaseConfig.projectId
+    }) 
+  : getApps()[0];
 
-const db = getFirestore(firebaseConfig.firestoreDatabaseId);
+const db = getFirestore(adminApp, firebaseConfig.firestoreDatabaseId);
+
+console.log(`Firebase Admin initialized.`);
+console.log(`- Project ID (from app): ${adminApp.options.projectId || 'default'}`);
+console.log(`- Project ID (from env): ${process.env.GOOGLE_CLOUD_PROJECT || 'not set'}`);
+console.log(`- Database ID: ${firebaseConfig.firestoreDatabaseId}`);
 
 async function startServer() {
   const app = express();
@@ -98,6 +103,25 @@ async function startServer() {
     } catch (error) {
       console.error("Error sending email:", error);
       res.status(500).json({ error: "Failed to send email" });
+    }
+  });
+
+  app.get("/api/firebase-status", async (req, res) => {
+    try {
+      const collections = await db.listCollections();
+      res.json({
+        status: "connected",
+        projectId: adminApp.options.projectId,
+        databaseId: firebaseConfig.firestoreDatabaseId,
+        collections: collections.map(c => c.id)
+      });
+    } catch (error) {
+      res.status(500).json({
+        status: "error",
+        message: error instanceof Error ? error.message : String(error),
+        projectId: adminApp.options.projectId,
+        databaseId: firebaseConfig.firestoreDatabaseId
+      });
     }
   });
 

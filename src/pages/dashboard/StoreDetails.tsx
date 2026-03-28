@@ -175,16 +175,22 @@ export default function StoreDetails() {
       
       var body = JSON.stringify(payload);
       
-      if (navigator.sendBeacon) {
-        navigator.sendBeacon(endpoint, body);
-        console.log('Avbora Tracked (Beacon):', eventType, metadata || '');
-      } else {
-        fetch(endpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: body
-        }).catch(function(e){console.error('Tracking error', e)});
-      }
+      // Use fetch with keepalive to ensure it's not cancelled on page unload
+      // and allows setting the correct Content-Type for Firestore REST API
+      fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: body,
+        keepalive: true
+      }).then(function() {
+        console.log('Avbora Tracked:', eventType, metadata || '');
+      }).catch(function(e){
+        console.error('Tracking error', e);
+        // Fallback to sendBeacon if fetch keepalive fails
+        if (navigator.sendBeacon) {
+          navigator.sendBeacon(endpoint, body);
+        }
+      });
     }
 
     window.AvboraTrack = track;
@@ -192,20 +198,24 @@ export default function StoreDetails() {
 
     // Smart tracking for Cart and Checkout
     document.addEventListener('click', function(e) {
-      var target = e.target.closest('button, a, input[type="button"], input[type="submit"], [role="button"]');
+      var target = e.target.closest('button, a, input, [role="button"]');
       if (!target) return;
       
       var text = target.innerText || target.value || target.getAttribute('aria-label') || target.getAttribute('title') || '';
       var lowerText = text.toLowerCase().trim();
+      
+      var className = typeof target.className === 'string' ? target.className : (target.getAttribute('class') || '');
+      var idOrClass = (target.id + ' ' + className).toLowerCase();
+      var href = (target.getAttribute('href') || '').toLowerCase();
+      var action = (target.getAttribute('data-action') || '').toLowerCase();
       
       // Add to Cart detection
       var cartKeywords = ['أضف للسلة', 'add to cart', 'إضافة للسلة', 'أضف إلى السلة', 'إضافة إلى السلة', 'سلة المشتريات', 'buy now', 'اشتري الآن', 'تسوق الآن', 'shop now', 'أضف إلى العربة', 'أضف للعربة'];
       var isCart = cartKeywords.some(function(kw) { return lowerText.includes(kw); });
       
       if (!isCart) {
-        var idOrClass = (target.id + ' ' + target.className).toLowerCase();
-        var odooClasses = ['js_check_product', 'a-submit', 'add_to_cart_button', 'product_add_to_cart'];
-        isCart = ['add-to-cart', 'add_to_cart', 'add-cart', 'btn-cart', 'cart-btn'].some(function(kw) { return idOrClass.includes(kw); }) ||
+        var odooClasses = ['js_check_product', 'a-submit', 'add_to_cart_button', 'product_add_to_cart', 'o_we_add_to_cart_btn'];
+        isCart = ['add-to-cart', 'add_to_cart', 'add-cart', 'btn-cart', 'cart-btn'].some(function(kw) { return idOrClass.includes(kw) || href.includes(kw) || action.includes(kw); }) ||
                  odooClasses.some(function(kw) { return idOrClass.includes(kw); });
       }
       
@@ -217,23 +227,46 @@ export default function StoreDetails() {
       
       // Checkout detection
       var checkoutKeywords = ['إتمام الطلب', 'checkout', 'الدفع', 'دفع', 'سداد', 'المتابعة للدفع', 'شراء', 'buy'];
-      var isCheckout = checkoutKeywords.some(function(kw) { return lowerText.includes(kw); });
+      var isCheckout = checkoutKeywords.some(function(kw) { return lowerText.includes(kw); }) || href.includes('checkout') || action.includes('checkout') || idOrClass.includes('checkout');
       
       if (isCheckout) {
         track('checkout_start', { button_text: text });
       }
-    });
+    }, true); // Use capture phase to bypass stopPropagation
 
-    // URL based tracking
-    if (window.location.href.includes('/checkout')) {
-      track('checkout_start');
+    function checkUrlEvents() {
+      var url = window.location.href.toLowerCase();
+      if (url.includes('/checkout') || url.includes('/shop/address') || url.includes('/shop/payment') || url.includes('/shop/confirm_order')) {
+        track('checkout_start');
+      }
+      if (url.includes('/cart') || url.includes('/shop/cart')) {
+        track('cart_view');
+      }
+      if (url.includes('/success') || url.includes('/thank-you') || url.includes('/order-received') || url.includes('/payment/validation') || url.includes('/shop/confirmation')) {
+        track('purchase_complete');
+      }
     }
-    if (window.location.href.includes('/cart')) {
-      track('cart_view');
-    }
-    if (window.location.href.includes('/success') || window.location.href.includes('/thank-you') || window.location.href.includes('/order-received')) {
-      track('purchase_complete');
-    }
+
+    // Initial URL check
+    checkUrlEvents();
+
+    // SPA Navigation Tracking
+    var pushState = history.pushState;
+    history.pushState = function() {
+      pushState.apply(history, arguments);
+      track('page_view');
+      checkUrlEvents();
+    };
+    var replaceState = history.replaceState;
+    history.replaceState = function() {
+      replaceState.apply(history, arguments);
+      track('page_view');
+      checkUrlEvents();
+    };
+    window.addEventListener('popstate', function() {
+      track('page_view');
+      checkUrlEvents();
+    });
 
     // Email capture
     document.addEventListener('change', function(e) {
@@ -447,12 +480,15 @@ export default function StoreDetails() {
                       event.eventType === 'email_captured' ? 'bg-indigo-100 text-indigo-600' :
                       event.eventType === 'purchase_complete' ? 'bg-green-100 text-green-600' :
                       event.eventType === 'checkout_abandon' ? 'bg-red-100 text-red-600' :
+                      event.eventType === 'checkout_start' ? 'bg-purple-100 text-purple-600' :
+                      event.eventType === 'cart_view' ? 'bg-yellow-100 text-yellow-600' :
                       'bg-orange-100 text-orange-600'
                     }`}>
                       {event.eventType === 'page_view' ? <Users className="h-4 w-4" /> : 
                        event.eventType === 'email_captured' ? <Mail className="h-4 w-4" /> :
                        event.eventType === 'purchase_complete' ? <CheckCircle2 className="h-4 w-4" /> :
                        event.eventType === 'checkout_abandon' ? <AlertCircle className="h-4 w-4" /> :
+                       event.eventType === 'checkout_start' ? <Activity className="h-4 w-4" /> :
                        <ShoppingCart className="h-4 w-4" />}
                     </div>
                     <div>

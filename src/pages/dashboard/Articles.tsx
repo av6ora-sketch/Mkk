@@ -4,7 +4,7 @@ import { auth, db } from "../../firebase";
 import { collection, query, where, getDocs, orderBy, deleteDoc, doc } from "firebase/firestore";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
-import { Loader2, Trash2, Calendar, CheckCircle2, Clock, FileText } from "lucide-react";
+import { Loader2, Trash2, Calendar, CheckCircle2, Clock, FileText, ExternalLink } from "lucide-react";
 import { format } from "date-fns";
 
 interface Article {
@@ -13,6 +13,7 @@ interface Article {
   status: 'draft' | 'scheduled' | 'published';
   scheduledAt?: string;
   publishedAt?: string;
+  publishedUrl?: string;
   createdAt: string;
   blogId: string;
 }
@@ -78,15 +79,15 @@ export default function Articles() {
         <div className="grid gap-4">
           {articles.map((article) => (
             <Card key={article.id}>
-              <CardHeader className="flex flex-row items-center justify-between py-4">
+              <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between py-4 gap-4">
                 <div className="flex items-center gap-4">
-                  <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
+                  <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center shrink-0">
                     {getStatusIcon(article.status)}
                   </div>
                   <div>
                     <CardTitle className="text-lg">{article.title}</CardTitle>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                      <span className="capitalize">{article.status}</span>
+                    <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground mt-1">
+                      <span className="capitalize font-medium">{article.status}</span>
                       {article.scheduledAt && (
                         <span className="flex items-center gap-1">
                           <Calendar className="h-3 w-3" />
@@ -99,10 +100,21 @@ export default function Articles() {
                           {format(new Date(article.publishedAt), "PPP p")}
                         </span>
                       )}
+                      {article.publishedUrl && (
+                        <a 
+                          href={article.publishedUrl} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1 text-primary hover:underline font-medium"
+                        >
+                          <ExternalLink className="h-3 w-3" />
+                          View on Blogger
+                        </a>
+                      )}
                     </div>
                   </div>
                 </div>
-                <Button variant="ghost" size="icon" onClick={() => handleDelete(article.id)} className="text-red-500 hover:text-red-600 hover:bg-red-50">
+                <Button variant="ghost" size="icon" onClick={() => handleDelete(article.id)} className="text-red-500 hover:text-red-600 hover:bg-red-50 shrink-0">
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </CardHeader>

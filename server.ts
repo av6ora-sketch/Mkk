@@ -133,7 +133,8 @@ async function startServer() {
           systemInstruction: `You are an expert SEO content writer and Blogger specialist. 
           Your goal is to create high-quality, engaging, and SEO-optimized articles for Blogger.
           The article should be formatted in clean HTML (suitable for Blogger's editor).
-          Include a catchy title, relevant headings (H2, H3), and well-structured paragraphs.
+          Include a catchy title, relevant headings (H2, H3), well-structured paragraphs, and bullet points if necessary.
+          Crucially, include strong SEO practices: bold important terms, and suggest places for strong backlinks (or include relevant placeholder links).
           Target Keywords: ${keywords.join(", ")}
           Language: ${language === 'ar' ? 'Arabic' : 'English'}
           
@@ -154,7 +155,7 @@ async function startServer() {
     }
   });
 
-  // --- Scheduling Logic ---
+  // --- Publishing & Scheduling Logic ---
 
   async function publishToBlogger(userId: string, blogId: string, title: string, content: string) {
     const settingsSnap = await db.collection("settings").doc(userId).get();
@@ -165,7 +166,7 @@ async function startServer() {
     oauth2Client.setCredentials(tokens);
     const blogger = google.blogger({ version: 'v3', auth: oauth2Client });
 
-    await blogger.posts.insert({
+    const response = await blogger.posts.insert({
       blogId,
       requestBody: {
         title,
@@ -173,7 +174,24 @@ async function startServer() {
         labels: ["AI Generated", "SEO"]
       }
     });
+    
+    return response.data;
   }
+
+  app.post("/api/publish-now", async (req, res) => {
+    const { userId, blogId, title, content } = req.body;
+    if (!userId || !blogId || !title || !content) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    try {
+      const publishedPost = await publishToBlogger(userId, blogId, title, content);
+      res.json({ success: true, post: publishedPost });
+    } catch (error) {
+      console.error("Error publishing immediately:", error);
+      res.status(500).json({ error: "Failed to publish to Blogger" });
+    }
+  });
 
   // Background job to check for scheduled articles
   setInterval(async () => {
@@ -200,11 +218,12 @@ async function startServer() {
         console.log(`Publishing scheduled article: ${article.title} (ID: ${doc.id})`);
 
         try {
-          await publishToBlogger(article.ownerUid, article.blogId, article.title, article.content);
+          const publishedPost = await publishToBlogger(article.ownerUid, article.blogId, article.title, article.content);
           
           await doc.ref.update({
             status: "published",
-            publishedAt: new Date().toISOString()
+            publishedAt: new Date().toISOString(),
+            publishedUrl: publishedPost?.url || null
           });
           
           console.log(`Successfully published article: ${article.title}`);

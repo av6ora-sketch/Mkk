@@ -64,16 +64,41 @@ export default function Generate() {
     }
   };
 
-  const handleSave = async (status: 'draft' | 'scheduled') => {
+  const handleSave = async (status: 'draft' | 'scheduled' | 'published') => {
     if (!generatedArticle || !auth.currentUser) return;
     setIsSaving(true);
     try {
+      let publishedUrl = null;
+
+      if (status === 'published') {
+        // Publish immediately via API
+        const response = await fetch('/api/publish-now', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: auth.currentUser.uid,
+            blogId: selectedBlog,
+            title: generatedArticle.title,
+            content: generatedArticle.content
+          })
+        });
+        
+        if (!response.ok) {
+          throw new Error("Failed to publish to Blogger");
+        }
+
+        const data = await response.json();
+        publishedUrl = data.post?.url;
+      }
+
       await addDoc(collection(db, "articles"), {
         title: generatedArticle.title,
         content: generatedArticle.content,
         keywords: keywords.split(",").map(k => k.trim()),
         status,
         scheduledAt: status === 'scheduled' ? scheduleDate : null,
+        publishedAt: status === 'published' ? new Date().toISOString() : null,
+        publishedUrl,
         blogId: selectedBlog,
         ownerUid: auth.currentUser.uid,
         createdAt: new Date().toISOString()
@@ -84,6 +109,7 @@ export default function Generate() {
       setKeywords("");
     } catch (error) {
       console.error("Error saving article:", error);
+      alert(t('error.publishFailed') || "Failed to publish article. Please check your Blogger connection.");
     } finally {
       setIsSaving(false);
     }
@@ -167,16 +193,19 @@ export default function Generate() {
 
       {generatedArticle && (
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>{generatedArticle.title}</CardTitle>
-            <div className="flex gap-2">
+          <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <CardTitle className="text-xl">{generatedArticle.title}</CardTitle>
+            <div className="flex flex-wrap gap-2">
               <Button variant="outline" onClick={() => handleSave('draft')} disabled={isSaving}>
                 <Save className="h-4 w-4 mr-2" />
-                Save as Draft
+                Save Draft
               </Button>
-              <Button onClick={() => handleSave('scheduled')} disabled={isSaving || !scheduleDate}>
+              <Button variant="secondary" onClick={() => handleSave('scheduled')} disabled={isSaving || !scheduleDate}>
                 <Calendar className="h-4 w-4 mr-2" />
-                Schedule Post
+                Schedule
+              </Button>
+              <Button onClick={() => handleSave('published')} disabled={isSaving}>
+                Publish Now
               </Button>
             </div>
           </CardHeader>

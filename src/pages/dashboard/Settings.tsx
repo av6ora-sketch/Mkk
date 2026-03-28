@@ -64,14 +64,14 @@ export default function Settings() {
           <CardDescription>Connect your Blogger account to enable article scheduling and publishing.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/50">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg bg-muted/50 gap-4">
             <div className="flex items-center gap-3">
               {isConnected ? (
-                <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
+                <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center shrink-0">
                   <ShieldCheck className="h-6 w-6 text-green-600" />
                 </div>
               ) : (
-                <div className="h-10 w-10 rounded-full bg-red-100 flex items-center justify-center">
+                <div className="h-10 w-10 rounded-full bg-red-100 flex items-center justify-center shrink-0">
                   <ShieldAlert className="h-6 w-6 text-red-600" />
                 </div>
               )}
@@ -83,12 +83,12 @@ export default function Settings() {
               </div>
             </div>
             {isConnected ? (
-              <Button variant="outline" size="sm" onClick={handleDisconnect} disabled={isLoading}>
+              <Button variant="outline" size="sm" onClick={handleDisconnect} disabled={isLoading} className="w-full sm:w-auto shrink-0">
                 {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogOut className="h-4 w-4 mr-2" />}
                 Disconnect
               </Button>
             ) : (
-              <Button size="sm" onClick={handleConnect}>Connect Blogger</Button>
+              <Button size="sm" onClick={handleConnect} className="w-full sm:w-auto shrink-0">Connect Blogger</Button>
             )}
           </div>
 

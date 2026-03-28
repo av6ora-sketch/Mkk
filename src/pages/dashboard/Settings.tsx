@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/src/components/ui/card";
-import { Button } from "@/src/components/ui/button";
-import { Input } from "@/src/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../../components/ui/card";
+import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
 import { Mail, Shield, Save, Loader2, CheckCircle2 } from "lucide-react";
 import { useLanguage } from "../../contexts/LanguageContext";
-import { db, auth } from "@/src/firebase";
+import { db, auth } from "../../firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 
 export default function DashboardSettings() {

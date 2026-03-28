@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/src/components/ui/card";
-import { Button } from "@/src/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../../components/ui/card";
+import { Button } from "../../components/ui/button";
 import { Download, FileText, Calendar, Loader2 } from "lucide-react";
-import { auth, db } from "@/src/firebase";
+import { auth, db } from "../../firebase";
 import { collection, query, where, getDocs, orderBy } from "firebase/firestore";
 import { useLanguage } from "../../contexts/LanguageContext";
 
@@ -19,7 +19,7 @@ interface ReportData {
   storeName: string;
 }
 
-import { handleFirestoreError, OperationType } from "@/src/lib/firestore-error";
+import { handleFirestoreError, OperationType } from "../../lib/firestore-error";
 
 export default function Reports() {
   const { t, language } = useLanguage();

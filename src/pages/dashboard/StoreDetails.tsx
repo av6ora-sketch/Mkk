@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
-import { Button } from "@/src/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/src/components/ui/card";
+import { Button } from "../../components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../../components/ui/card";
 import { ArrowRight, Activity, Users, ShoppingCart, CheckCircle2, AlertCircle, Copy, Loader2, Mail } from "lucide-react";
-import { db, auth } from "@/src/firebase";
+import { db, auth } from "../../firebase";
 import firebaseConfig from "../../../firebase-applet-config.json";
 import { doc, getDoc, collection, query, where, onSnapshot, updateDoc } from "firebase/firestore";
 import { useLanguage } from "../../contexts/LanguageContext";
@@ -26,7 +26,7 @@ interface TrackingEvent {
   metadata?: string;
 }
 
-import { handleFirestoreError, OperationType } from "@/src/lib/firestore-error";
+import { handleFirestoreError, OperationType } from "../../lib/firestore-error";
 
 export default function StoreDetails() {
   const { t, language } = useLanguage();

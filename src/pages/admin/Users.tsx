@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
 import { useOutletContext } from "react-router-dom";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/src/components/ui/card";
-import { Button } from "@/src/components/ui/button";
-import { Input } from "@/src/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../../components/ui/card";
+import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
 import { Search, Edit, CheckCircle2, Loader2, Trash2, Ban } from "lucide-react";
-import { db, auth } from "@/src/firebase";
+import { db, auth } from "../../firebase";
 import { collection, getDocs, doc, updateDoc, query, where, deleteDoc } from "firebase/firestore";
 import { useLanguage } from "../../contexts/LanguageContext";
 
@@ -27,7 +27,7 @@ interface Role {
   permissions: any;
 }
 
-import { handleFirestoreError, OperationType } from "@/src/lib/firestore-error";
+import { handleFirestoreError, OperationType } from "../../lib/firestore-error";
 
 export default function AdminUsers() {
   const { language } = useLanguage();

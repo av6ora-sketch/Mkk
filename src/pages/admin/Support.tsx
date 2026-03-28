@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useOutletContext } from "react-router-dom";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/src/components/ui/card";
-import { Button } from "@/src/components/ui/button";
-import { Input } from "@/src/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../../components/ui/card";
+import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
 import { MessageSquare, LifeBuoy, Send, Loader2, X, MessageCircle, CheckCircle2, RotateCcw, User, Ban, Trash2, AlertTriangle } from "lucide-react";
 import { useLanguage } from "../../contexts/LanguageContext";
-import { db, auth } from "@/src/firebase";
+import { db, auth } from "../../firebase";
 import { collection, query, onSnapshot, orderBy, serverTimestamp, doc, updateDoc, addDoc, getDoc, deleteDoc } from "firebase/firestore";
-import { handleFirestoreError, OperationType } from "@/src/lib/firestore-error";
-import { cn } from "@/src/lib/utils";
+import { handleFirestoreError, OperationType } from "../../lib/firestore-error";
+import { cn } from "../../lib/utils";
 
 interface Ticket {
   id: string;

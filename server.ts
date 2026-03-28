@@ -4,22 +4,26 @@ import path from "path";
 import { fileURLToPath } from "url";
 import nodemailer from "nodemailer";
 import dotenv from "dotenv";
-import { initializeApp, cert, getApps } from "firebase-admin/app";
+import { initializeApp, getApps } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
+import fs from "fs";
 
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Load Firebase config
+const firebaseConfig = JSON.parse(fs.readFileSync(path.join(__dirname, "firebase-applet-config.json"), "utf8"));
+
 // Initialize Firebase Admin
 if (getApps().length === 0) {
   initializeApp({
-    // Use default credentials in this environment
+    projectId: firebaseConfig.projectId,
   });
 }
 
-const db = getFirestore();
+const db = getFirestore(firebaseConfig.firestoreDatabaseId);
 
 async function startServer() {
   const app = express();

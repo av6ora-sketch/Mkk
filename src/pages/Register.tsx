@@ -1,14 +1,14 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
-import { Button } from "@/src/components/ui/button";
-import { Input } from "@/src/components/ui/input";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
 import { Activity, Eye, EyeOff, Loader2, X } from "lucide-react";
 import { createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from "firebase/auth";
-import { auth, db } from "@/src/firebase";
+import { auth, db } from "../firebase";
 import { doc, setDoc, getDoc } from "firebase/firestore";
 import { useLanguage } from "../contexts/LanguageContext";
-import { handleFirestoreError, OperationType } from "@/src/lib/firestore-error";
+import { handleFirestoreError, OperationType } from "../lib/firestore-error";
 
 export default function Register() {
   const { language } = useLanguage();

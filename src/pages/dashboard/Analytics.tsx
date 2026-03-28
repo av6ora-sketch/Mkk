@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/src/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../../components/ui/card";
 import { AlertTriangle, TrendingDown, CheckCircle, Info, Loader2 } from "lucide-react";
 import { useLanguage } from "../../contexts/LanguageContext";
-import { auth, db } from "@/src/firebase";
+import { auth, db } from "../../firebase";
 import { collection, query, where, getDocs } from "firebase/firestore";
 
-import { handleFirestoreError, OperationType } from "@/src/lib/firestore-error";
+import { handleFirestoreError, OperationType } from "../../lib/firestore-error";
 
 export default function Analytics() {
   const { t, language } = useLanguage();

@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "motion/react";
-import { Button } from "@/src/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/src/components/ui/card";
-import { Input } from "@/src/components/ui/input";
+import { Button } from "../../components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../../components/ui/card";
+import { Input } from "../../components/ui/input";
 import { Store, Plus, Code, CheckCircle2, ExternalLink, Loader2, ShoppingBag } from "lucide-react";
-import { db, auth } from "@/src/firebase";
-import firebaseConfig from "@/firebase-applet-config.json";
+import { db, auth } from "../../firebase";
+import firebaseConfig from "../../../firebase-applet-config.json";
 import { collection, addDoc, query, where, onSnapshot, getDocs } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import { useLanguage } from "../../contexts/LanguageContext";
@@ -20,7 +20,7 @@ interface StoreData {
   conversion?: string;
 }
 
-import { handleFirestoreError, OperationType } from "@/src/lib/firestore-error";
+import { handleFirestoreError, OperationType } from "../../lib/firestore-error";
 
 const platforms = [
   { id: "custom", name: "Custom Website", nameAr: "موقع مخصص" },

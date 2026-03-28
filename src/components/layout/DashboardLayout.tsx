@@ -15,10 +15,10 @@ import {
   Loader2,
   Settings
 } from "lucide-react";
-import { cn } from "@/src/lib/utils";
-import { Button } from "@/src/components/ui/button";
+import { cn } from "../../lib/utils";
+import { Button } from "../ui/button";
 import { useLanguage } from "../../contexts/LanguageContext";
-import { auth } from "@/src/firebase";
+import { auth } from "../../firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 
 export default function DashboardLayout() {

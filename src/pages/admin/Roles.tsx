@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/src/components/ui/card";
-import { Button } from "@/src/components/ui/button";
-import { Input } from "@/src/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../../components/ui/card";
+import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
 import { Shield, Plus, Edit, Trash2, Loader2, Check } from "lucide-react";
-import { db, auth } from "@/src/firebase";
+import { db, auth } from "../../firebase";
 import { collection, getDocs, doc, setDoc, deleteDoc, serverTimestamp } from "firebase/firestore";
 import { useLanguage } from "../../contexts/LanguageContext";
-import { handleFirestoreError, OperationType } from "@/src/lib/firestore-error";
+import { handleFirestoreError, OperationType } from "../../lib/firestore-error";
 
 interface Role {
   id: string;

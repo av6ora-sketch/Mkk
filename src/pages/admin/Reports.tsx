@@ -1,13 +1,13 @@
 import { useState, useEffect } from "react";
 import { useOutletContext } from "react-router-dom";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/src/components/ui/card";
-import { Button } from "@/src/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../../components/ui/card";
+import { Button } from "../../components/ui/button";
 import { Download, FileText, Calendar, Loader2 } from "lucide-react";
 import { useLanguage } from "../../contexts/LanguageContext";
-import { db, auth } from "@/src/firebase";
+import { db, auth } from "../../firebase";
 import { collection, getDocs } from "firebase/firestore";
 
-import { handleFirestoreError, OperationType } from "@/src/lib/firestore-error";
+import { handleFirestoreError, OperationType } from "../../lib/firestore-error";
 
 export default function AdminReports() {
   const { language } = useLanguage();

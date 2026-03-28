@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/src/components/ui/card";
-import { Button } from "@/src/components/ui/button";
-import { Input } from "@/src/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../../components/ui/card";
+import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
 import { Mail, MessageSquare, LifeBuoy, Lightbulb, Send, Loader2, ChevronRight, ChevronLeft, Plus, X, MessageCircle } from "lucide-react";
 import { useLanguage } from "../../contexts/LanguageContext";
-import { db, auth } from "@/src/firebase";
+import { db, auth } from "../../firebase";
 import { collection, addDoc, query, where, onSnapshot, orderBy, serverTimestamp, doc, updateDoc, getDocs } from "firebase/firestore";
-import { handleFirestoreError, OperationType } from "@/src/lib/firestore-error";
-import { cn } from "@/src/lib/utils";
+import { handleFirestoreError, OperationType } from "../../lib/firestore-error";
+import { cn } from "../../lib/utils";
 import { motion } from "motion/react";
 
 interface Ticket {

@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui/card";
-import { Button } from "@/src/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
+import { Button } from "../../components/ui/button";
 import { Store, ExternalLink, Loader2, Trash2, Ban, CheckCircle2 } from "lucide-react";
-import { db, auth } from "@/src/firebase";
+import { db, auth } from "../../firebase";
 import { collection, getDocs, doc, deleteDoc, updateDoc } from "firebase/firestore";
 import { useLanguage } from "../../contexts/LanguageContext";
 
@@ -16,7 +16,7 @@ interface StoreData {
   isBanned?: boolean;
 }
 
-import { handleFirestoreError, OperationType } from "@/src/lib/firestore-error";
+import { handleFirestoreError, OperationType } from "../../lib/firestore-error";
 
 export default function AdminStores() {
   const { language } = useLanguage();

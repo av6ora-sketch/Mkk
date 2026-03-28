@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/src/components/ui/card";
-import { Button } from "@/src/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "../../components/ui/card";
+import { Button } from "../../components/ui/button";
 import { CheckCircle2, Loader2 } from "lucide-react";
-import { auth, db } from "@/src/firebase";
+import { auth, db } from "../../firebase";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { useLanguage } from "../../contexts/LanguageContext";
 
-import { handleFirestoreError, OperationType } from "@/src/lib/firestore-error";
+import { handleFirestoreError, OperationType } from "../../lib/firestore-error";
 
 export default function Plans() {
   const { t, language } = useLanguage();

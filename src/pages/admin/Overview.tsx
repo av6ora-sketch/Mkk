@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
 import { useOutletContext } from "react-router-dom";
-import { Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 import { Users, Store, BarChart3, TrendingUp, Loader2 } from "lucide-react";
-import { db, auth } from "@/src/firebase";
+import { db, auth } from "../../firebase";
 import { collection, getDocs, query, orderBy, limit } from "firebase/firestore";
 import { useLanguage } from "../../contexts/LanguageContext";
 
-import { handleFirestoreError, OperationType } from "@/src/lib/firestore-error";
+import { handleFirestoreError, OperationType } from "../../lib/firestore-error";
 
 export default function AdminOverview() {
   const { language } = useLanguage();

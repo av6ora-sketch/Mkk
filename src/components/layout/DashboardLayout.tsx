@@ -49,12 +49,9 @@ export default function DashboardLayout() {
 
   const sidebarLinks = [
     { name: t('sidebar.overview'), href: "/dashboard", icon: LayoutDashboard },
-    { name: t('sidebar.stores'), href: "/dashboard/stores", icon: Store },
-    { name: t('sidebar.analytics'), href: "/dashboard/analytics", icon: BarChart3 },
-    { name: t('sidebar.reports'), href: "/dashboard/reports", icon: FileText },
-    { name: t('sidebar.plans'), href: "/dashboard/plans", icon: CreditCard },
-    { name: t('sidebar.profile'), href: "/dashboard/profile", icon: User },
-    { name: t('sidebar.support'), href: "/dashboard/support", icon: LifeBuoy },
+    { name: t('sidebar.blogs'), href: "/dashboard/blogs", icon: Store },
+    { name: t('sidebar.generate'), href: "/dashboard/generate", icon: Activity },
+    { name: t('sidebar.articles'), href: "/dashboard/articles", icon: FileText },
     { name: t('sidebar.settings'), href: "/dashboard/settings", icon: Settings },
   ];
 

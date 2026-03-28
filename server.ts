@@ -2,11 +2,12 @@ import express from "express";
 import { createServer as createViteServer } from "vite";
 import path from "path";
 import { fileURLToPath } from "url";
-import nodemailer from "nodemailer";
 import dotenv from "dotenv";
 import { initializeApp, getApps } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import fs from "fs";
+import { google } from "googleapis";
+import { GoogleGenAI } from "@google/genai";
 
 dotenv.config();
 
@@ -23,12 +24,18 @@ const adminApp = getApps().length === 0
     }) 
   : getApps()[0];
 
-const db = getFirestore(adminApp, firebaseConfig.firestoreDatabaseId);
+// Use named database if provided, otherwise fallback to default
+const db = getFirestore(adminApp, firebaseConfig.firestoreDatabaseId || "(default)");
 
-console.log(`Firebase Admin initialized.`);
-console.log(`- Project ID (from app): ${adminApp.options.projectId || 'default'}`);
-console.log(`- Project ID (from env): ${process.env.GOOGLE_CLOUD_PROJECT || 'not set'}`);
-console.log(`- Database ID: ${firebaseConfig.firestoreDatabaseId}`);
+// Initialize Gemini
+const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
+
+// Google OAuth Client for Blogger
+const oauth2Client = new google.auth.OAuth2(
+  process.env.GOOGLE_CLIENT_ID,
+  process.env.GOOGLE_CLIENT_SECRET,
+  `${process.env.APP_URL}/auth/callback`
+);
 
 async function startServer() {
   const app = express();
@@ -36,96 +43,182 @@ async function startServer() {
 
   app.use(express.json());
 
-  // API Route for sending abandonment emails
-  app.post("/api/send-abandonment-email", async (req, res) => {
-    const { email, storeName, cartUrl, ownerId } = req.body;
+  // --- Auth Routes ---
 
-    if (!email || !storeName) {
-      return res.status(400).json({ error: "Missing required fields" });
-    }
+  app.get("/api/auth/url", (req, res) => {
+    const scopes = [
+      'https://www.googleapis.com/auth/blogger',
+      'https://www.googleapis.com/auth/userinfo.profile',
+      'https://www.googleapis.com/auth/userinfo.email'
+    ];
 
-    let smtpHost = process.env.SMTP_HOST;
-    let smtpPort = process.env.SMTP_PORT;
-    let smtpUser = process.env.SMTP_USER;
-    let smtpPass = process.env.SMTP_PASS;
+    const url = oauth2Client.generateAuthUrl({
+      access_type: 'offline',
+      scope: scopes,
+      prompt: 'consent'
+    });
 
-    // If ownerId is provided, try to fetch their custom SMTP settings from Firestore
-    if (ownerId) {
-      try {
-        const settingsSnap = await db.collection("settings").doc(ownerId).get();
-        if (settingsSnap.exists) {
-          const settings = settingsSnap.data()?.smtp;
-          if (settings?.host && settings?.user && settings?.pass) {
-            smtpHost = settings.host;
-            smtpPort = settings.port || "587";
-            smtpUser = settings.user;
-            smtpPass = settings.pass;
-          }
-        }
-      } catch (error) {
-        console.error("Error fetching user SMTP settings:", error);
+    res.json({ url });
+  });
+
+  app.get("/auth/callback", async (req, res) => {
+    const { code, state } = req.query;
+    const userId = state as string; // We'll pass userId in state from client
+
+    try {
+      const { tokens } = await oauth2Client.getToken(code as string);
+      
+      // Store tokens in Firestore for this user
+      if (userId) {
+        await db.collection("settings").doc(userId).set({
+          bloggerTokens: tokens,
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
       }
-    }
-    
-    if (!smtpHost || !smtpUser || !smtpPass) {
-      console.log("SMTP not configured. Skipping email sending.");
-      return res.status(200).json({ message: "SMTP not configured. Email logged but not sent." });
-    }
 
-    try {
-      const transporter = nodemailer.createTransport({
-        host: smtpHost,
-        port: parseInt(smtpPort || "587"),
-        secure: smtpPort === "465",
-        auth: {
-          user: smtpUser,
-          pass: smtpPass,
-        },
-      });
-
-      const mailOptions = {
-        from: `"${storeName}" <${smtpUser}>`,
-        to: email,
-        subject: `أكمل طلبك في ${storeName}`,
-        html: `
-          <div dir="rtl" style="font-family: sans-serif; padding: 20px;">
-            <h2>مرحباً!</h2>
-            <p>لقد لاحظنا أنك تركت بعض المنتجات في سلتك في متجر <strong>${storeName}</strong>.</p>
-            <p>لا تفوت الفرصة، يمكنك إكمال طلبك الآن عبر الرابط التالي:</p>
-            <a href="${cartUrl}" style="display: inline-block; padding: 10px 20px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px;">إكمال الطلب</a>
-            <p>شكراً لك!</p>
-          </div>
-        `,
-      };
-
-      await transporter.sendMail(mailOptions);
-      res.status(200).json({ message: "Email sent successfully" });
+      res.send(`
+        <html>
+          <body>
+            <script>
+              if (window.opener) {
+                window.opener.postMessage({ type: 'OAUTH_AUTH_SUCCESS' }, '*');
+                window.close();
+              } else {
+                window.location.href = '/dashboard';
+              }
+            </script>
+            <p>Authentication successful. You can close this window.</p>
+          </body>
+        </html>
+      `);
     } catch (error) {
-      console.error("Error sending email:", error);
-      res.status(500).json({ error: "Failed to send email" });
+      console.error("Error exchanging code for tokens:", error);
+      res.status(500).send("Authentication failed.");
     }
   });
 
-  app.get("/api/firebase-status", async (req, res) => {
+  // --- Blogger API Routes ---
+
+  app.get("/api/blogs", async (req, res) => {
+    const userId = req.query.userId as string;
+    if (!userId) return res.status(400).json({ error: "Missing userId" });
+
     try {
-      const collections = await db.listCollections();
-      res.json({
-        status: "connected",
-        projectId: adminApp.options.projectId,
-        databaseId: firebaseConfig.firestoreDatabaseId,
-        collections: collections.map(c => c.id)
-      });
+      const settingsSnap = await db.collection("settings").doc(userId).get();
+      const tokens = settingsSnap.data()?.bloggerTokens;
+
+      if (!tokens) return res.status(401).json({ error: "Not authenticated with Blogger" });
+
+      oauth2Client.setCredentials(tokens);
+      const blogger = google.blogger({ version: 'v3', auth: oauth2Client });
+      
+      const response = await blogger.blogs.listByUser({ userId: 'self' });
+      res.json(response.data.items || []);
     } catch (error) {
-      res.status(500).json({
-        status: "error",
-        message: error instanceof Error ? error.message : String(error),
-        projectId: adminApp.options.projectId,
-        databaseId: firebaseConfig.firestoreDatabaseId
-      });
+      console.error("Error fetching blogs:", error);
+      res.status(500).json({ error: "Failed to fetch blogs" });
     }
   });
 
-  // Vite middleware for development
+  // --- Article Generation ---
+
+  app.post("/api/generate-article", async (req, res) => {
+    const { prompt, keywords, language = "ar" } = req.body;
+
+    try {
+      const result = await genAI.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: [{ parts: [{ text: prompt }] }],
+        config: {
+          systemInstruction: `You are an expert SEO content writer and Blogger specialist. 
+          Your goal is to create high-quality, engaging, and SEO-optimized articles for Blogger.
+          The article should be formatted in clean HTML (suitable for Blogger's editor).
+          Include a catchy title, relevant headings (H2, H3), and well-structured paragraphs.
+          Target Keywords: ${keywords.join(", ")}
+          Language: ${language === 'ar' ? 'Arabic' : 'English'}
+          
+          Return the response in JSON format:
+          {
+            "title": "Article Title",
+            "content": "HTML content of the article"
+          }`,
+          responseMimeType: "application/json"
+        }
+      });
+
+      const article = JSON.parse(result.text);
+      res.json(article);
+    } catch (error) {
+      console.error("Error generating article:", error);
+      res.status(500).json({ error: "Failed to generate article" });
+    }
+  });
+
+  // --- Scheduling Logic ---
+
+  async function publishToBlogger(userId: string, blogId: string, title: string, content: string) {
+    const settingsSnap = await db.collection("settings").doc(userId).get();
+    const tokens = settingsSnap.data()?.bloggerTokens;
+
+    if (!tokens) throw new Error("No tokens found for user");
+
+    oauth2Client.setCredentials(tokens);
+    const blogger = google.blogger({ version: 'v3', auth: oauth2Client });
+
+    await blogger.posts.insert({
+      blogId,
+      requestBody: {
+        title,
+        content,
+        labels: ["AI Generated", "SEO"]
+      }
+    });
+  }
+
+  // Background job to check for scheduled articles
+  setInterval(async () => {
+    console.log("Checking for scheduled articles...");
+    const now = new Date().toISOString();
+
+    try {
+      // Test connection
+      try {
+        await db.listCollections();
+      } catch (connErr) {
+        console.error("Firestore Admin connection test failed:", connErr);
+      }
+
+      const articlesSnap = await db.collection("articles")
+        .where("status", "==", "scheduled")
+        .where("scheduledAt", "<=", now)
+        .get();
+
+      console.log(`Found ${articlesSnap.size} articles to publish.`);
+
+      for (const doc of articlesSnap.docs) {
+        const article = doc.data();
+        console.log(`Publishing scheduled article: ${article.title} (ID: ${doc.id})`);
+
+        try {
+          await publishToBlogger(article.ownerUid, article.blogId, article.title, article.content);
+          
+          await doc.ref.update({
+            status: "published",
+            publishedAt: new Date().toISOString()
+          });
+          
+          console.log(`Successfully published article: ${article.title}`);
+        } catch (error) {
+          console.error(`Failed to publish article ${article.title}:`, error);
+        }
+      }
+    } catch (error) {
+      console.error("Error in scheduler background job:", error);
+    }
+  }, 60 * 1000); // Check every minute
+
+  // --- Vite Middleware ---
+
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
       server: { middlewareMode: true },
@@ -139,110 +232,6 @@ async function startServer() {
       res.sendFile(path.join(distPath, "index.html"));
     });
   }
-
-  // Background job to check for abandoned checkouts
-  setInterval(async () => {
-    console.log("Checking for abandoned checkouts...");
-    const now = new Date();
-    const twentyMinutesAgo = new Date(now.getTime() - 20 * 60 * 1000);
-    const thirtyMinutesAgo = new Date(now.getTime() - 30 * 60 * 1000);
-
-    try {
-      // Find checkout_start events that are 20-30 minutes old
-      const eventsSnap = await db.collection("events")
-        .where("eventType", "==", "checkout_start")
-        .where("timestamp", "<=", twentyMinutesAgo)
-        .where("timestamp", ">", thirtyMinutesAgo)
-        .get();
-
-      for (const eventDoc of eventsSnap.docs) {
-        const eventData = eventDoc.data();
-        const { sessionId, storeId, ownerId, email, url } = eventData;
-
-        if (!sessionId || !storeId) continue;
-
-        // Check if this session already has a purchase_complete or checkout_abandon event
-        const otherEventsSnap = await db.collection("events")
-          .where("sessionId", "==", sessionId)
-          .where("eventType", "in", ["purchase_complete", "checkout_abandon"])
-          .get();
-
-        if (otherEventsSnap.empty) {
-          console.log(`Abandoned checkout detected for session ${sessionId}`);
-
-          // 1. Record checkout_abandon event
-          await db.collection("events").add({
-            storeId,
-            ownerId,
-            sessionId,
-            eventType: "checkout_abandon",
-            email: email || null,
-            url,
-            timestamp: new Date(),
-            metadata: JSON.stringify({ original_event_id: eventDoc.id })
-          });
-
-          // 2. Send email if we have an email address
-          if (email) {
-            // Get store name
-            const storeSnap = await db.collection("stores").doc(storeId).get();
-            const storeName = storeSnap.exists ? storeSnap.data()?.name : "متجرنا";
-
-            // Trigger email sending logic (internal call or reuse logic)
-            console.log(`Sending abandonment email to ${email} for store ${storeName}`);
-            
-            // Reusing the SMTP logic
-            let smtpHost = process.env.SMTP_HOST;
-            let smtpPort = process.env.SMTP_PORT;
-            let smtpUser = process.env.SMTP_USER;
-            let smtpPass = process.env.SMTP_PASS;
-
-            if (ownerId) {
-              const settingsSnap = await db.collection("settings").doc(ownerId).get();
-              if (settingsSnap.exists) {
-                const settings = settingsSnap.data()?.smtp;
-                if (settings?.host && settings?.user && settings?.pass) {
-                  smtpHost = settings.host;
-                  smtpPort = settings.port || "587";
-                  smtpUser = settings.user;
-                  smtpPass = settings.pass;
-                }
-              }
-            }
-
-            if (smtpHost && smtpUser && smtpPass) {
-              const transporter = nodemailer.createTransport({
-                host: smtpHost,
-                port: parseInt(smtpPort || "587"),
-                secure: smtpPort === "465",
-                auth: { user: smtpUser, pass: smtpPass },
-              });
-
-              await transporter.sendMail({
-                from: `"${storeName}" <${smtpUser}>`,
-                to: email,
-                subject: `نسيت تكمل طلبك؟ ارجع الآن`,
-                html: `
-                  <div dir="rtl" style="font-family: sans-serif; padding: 20px; text-align: center;">
-                    <h2>مرحباً!</h2>
-                    <p>لقد لاحظنا أنك تركت بعض المنتجات في سلتك في متجر <strong>${storeName}</strong>.</p>
-                    <p style="font-size: 18px; margin: 20px 0;">نسيت تكمل طلبك؟ ارجع الآن</p>
-                    <a href="${url}" style="display: inline-block; padding: 12px 24px; background-color: #2563eb; color: white; text-decoration: none; border-radius: 6px; font-weight: bold;">إكمال الطلب</a>
-                    <p style="margin-top: 30px; color: #666;">شكراً لك!</p>
-                  </div>
-                `,
-              });
-              console.log(`Email sent to ${email}`);
-            } else {
-              console.log("SMTP not configured for owner, skipping email.");
-            }
-          }
-        }
-      }
-    } catch (error) {
-      console.error("Error in abandonment background job:", error);
-    }
-  }, 5 * 60 * 1000); // Run every 5 minutes
 
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on http://localhost:${PORT}`);

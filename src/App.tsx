@@ -8,37 +8,21 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { LanguageProvider } from "./contexts/LanguageContext";
 import { Loader2 } from "lucide-react";
 
-// Layouts (Keep these static to prevent layout shift)
+// Layouts
 import MainLayout from "./components/layout/MainLayout";
 import DashboardLayout from "./components/layout/DashboardLayout";
-import AdminLayout from "./components/layout/AdminLayout";
 
 // Lazy Loaded Pages
 const Home = lazy(() => import("./pages/Home"));
 const Login = lazy(() => import("./pages/Login"));
 const Register = lazy(() => import("./pages/Register"));
-const Privacy = lazy(() => import("./pages/Privacy"));
-const Terms = lazy(() => import("./pages/Terms"));
 
 // Lazy Loaded Dashboard Pages
 const DashboardOverview = lazy(() => import("./pages/dashboard/Overview"));
-const DashboardStores = lazy(() => import("./pages/dashboard/Stores"));
-const StoreDetails = lazy(() => import("./pages/dashboard/StoreDetails"));
-const DashboardAnalytics = lazy(() => import("./pages/dashboard/Analytics"));
-const DashboardReports = lazy(() => import("./pages/dashboard/Reports"));
-const DashboardPlans = lazy(() => import("./pages/dashboard/Plans"));
-const DashboardProfile = lazy(() => import("./pages/dashboard/Profile"));
-const DashboardSupport = lazy(() => import("./pages/dashboard/Support"));
+const DashboardBlogs = lazy(() => import("./pages/dashboard/Blogs"));
+const DashboardGenerate = lazy(() => import("./pages/dashboard/Generate"));
+const DashboardArticles = lazy(() => import("./pages/dashboard/Articles"));
 const DashboardSettings = lazy(() => import("./pages/dashboard/Settings"));
-
-// Lazy Loaded Admin Pages
-const AdminOverview = lazy(() => import("./pages/admin/Overview"));
-const AdminUsers = lazy(() => import("./pages/admin/Users"));
-const AdminStores = lazy(() => import("./pages/admin/Stores"));
-const AdminReports = lazy(() => import("./pages/admin/Reports"));
-const AdminProfile = lazy(() => import("./pages/admin/Profile"));
-const AdminSupport = lazy(() => import("./pages/admin/Support"));
-const AdminRoles = lazy(() => import("./pages/admin/Roles"));
 
 const LoadingFallback = () => (
   <div className="min-h-screen flex items-center justify-center bg-background">
@@ -55,8 +39,6 @@ export default function App() {
             {/* Public Routes */}
             <Route path="/" element={<MainLayout />}>
               <Route index element={<Home />} />
-              <Route path="privacy" element={<Privacy />} />
-              <Route path="terms" element={<Terms />} />
             </Route>
             
             {/* Auth Routes */}
@@ -66,25 +48,10 @@ export default function App() {
             {/* User Dashboard Routes */}
             <Route path="/dashboard" element={<DashboardLayout />}>
               <Route index element={<DashboardOverview />} />
-              <Route path="stores" element={<DashboardStores />} />
-              <Route path="stores/:storeId" element={<StoreDetails />} />
-              <Route path="analytics" element={<DashboardAnalytics />} />
-              <Route path="reports" element={<DashboardReports />} />
-              <Route path="plans" element={<DashboardPlans />} />
-              <Route path="profile" element={<DashboardProfile />} />
-              <Route path="support" element={<DashboardSupport />} />
+              <Route path="blogs" element={<DashboardBlogs />} />
+              <Route path="generate" element={<DashboardGenerate />} />
+              <Route path="articles" element={<DashboardArticles />} />
               <Route path="settings" element={<DashboardSettings />} />
-            </Route>
-
-            {/* Admin Dashboard Routes */}
-            <Route path="/admin" element={<AdminLayout />}>
-              <Route index element={<AdminOverview />} />
-              <Route path="users" element={<AdminUsers />} />
-              <Route path="stores" element={<AdminStores />} />
-              <Route path="reports" element={<AdminReports />} />
-              <Route path="profile" element={<AdminProfile />} />
-              <Route path="support" element={<AdminSupport />} />
-              <Route path="roles" element={<AdminRoles />} />
             </Route>
 
             {/* Fallback */}

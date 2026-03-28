@@ -5,246 +5,80 @@
       "description": "A user of the platform",
       "type": "object",
       "properties": {
-        "uid": {
-          "type": "string",
-          "description": "The unique identifier of the user"
-        },
-        "email": {
-          "type": "string",
-          "format": "email",
-          "description": "The email address of the user"
-        },
-        "firstName": {
-          "type": "string",
-          "description": "The first name of the user"
-        },
-        "lastName": {
-          "type": "string",
-          "description": "The last name of the user"
-        },
-        "avatar": {
-          "type": "string",
-          "description": "The avatar URL of the user"
-        },
-        "phone": {
-          "type": "string",
-          "description": "The phone number of the user"
-        },
-        "country": {
-          "type": "string",
-          "description": "The country of the user"
-        },
-        "role": {
-          "type": "string",
-          "enum": ["user", "admin"],
-          "description": "The role of the user"
-        },
-        "plan": {
-          "type": "string",
-          "enum": ["الأساسية", "الاحترافية", "المؤسسات"],
-          "description": "The subscription plan of the user"
-        },
-        "createdAt": {
-          "type": "string",
-          "format": "date-time",
-          "description": "The creation date of the user"
-        }
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "role": { "type": "string", "enum": ["user", "admin"] },
+        "createdAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["uid", "email", "role", "plan", "createdAt"]
+      "required": ["uid", "email", "role", "createdAt"]
     },
-    "Store": {
-      "title": "Store",
-      "description": "A store connected by a user",
+    "Blog": {
+      "title": "Blog",
+      "description": "A connected Blogger blog",
       "type": "object",
       "properties": {
-        "uid": {
-          "type": "string",
-          "description": "The owner's user ID"
-        },
-        "name": {
-          "type": "string",
-          "description": "The name of the store"
-        },
-        "domain": {
-          "type": "string",
-          "description": "The domain of the store"
-        },
-        "status": {
-          "type": "string",
-          "enum": ["pending", "active"],
-          "description": "The status of the store connection"
-        },
-        "createdAt": {
-          "type": "string",
-          "format": "date-time",
-          "description": "The creation date of the store"
-        }
+        "id": { "type": "string", "description": "Blogger Blog ID" },
+        "title": { "type": "string" },
+        "url": { "type": "string" },
+        "ownerUid": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["uid", "name", "domain", "status", "createdAt"]
+      "required": ["id", "title", "url", "ownerUid", "createdAt"]
     },
-    "TrackingEvent": {
-      "title": "TrackingEvent",
-      "description": "An event tracked from a store",
+    "Article": {
+      "title": "Article",
+      "description": "A generated article",
       "type": "object",
       "properties": {
-        "storeId": {
-          "type": "string",
-          "description": "The ID of the store"
-        },
-        "ownerId": {
-          "type": "string",
-          "description": "The ID of the store owner"
-        },
-        "eventType": {
-          "type": "string",
-          "description": "The type of event (e.g., page_view, add_to_cart)"
-        },
-        "url": {
-          "type": "string",
-          "description": "The URL where the event occurred"
-        },
-        "timestamp": {
-          "type": "string",
-          "format": "date-time",
-          "description": "The time the event occurred"
-        },
-        "metadata": {
-          "type": "string",
-          "description": "Optional JSON string of additional data"
-        },
-        "sessionId": {
-          "type": "string",
-          "description": "The session ID of the user"
-        },
-        "email": {
-          "type": "string",
-          "description": "The captured email of the user"
-        }
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "keywords": { "type": "array", "items": { "type": "string" } },
+        "status": { "type": "string", "enum": ["draft", "scheduled", "published"] },
+        "scheduledAt": { "type": "string", "format": "date-time" },
+        "publishedAt": { "type": "string", "format": "date-time" },
+        "blogId": { "type": "string" },
+        "ownerUid": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["storeId", "ownerId", "eventType", "url", "timestamp"]
-    },
-    "Ticket": {
-      "title": "Ticket",
-      "description": "A support ticket created by a user",
-      "type": "object",
-      "properties": {
-        "userId": {
-          "type": "string",
-          "description": "The ID of the user who created the ticket"
-        },
-        "userName": {
-          "type": "string",
-          "description": "The name of the user"
-        },
-        "userEmail": {
-          "type": "string",
-          "description": "The email of the user"
-        },
-        "subject": {
-          "type": "string",
-          "description": "The subject of the ticket"
-        },
-        "status": {
-          "type": "string",
-          "enum": ["open", "closed"],
-          "description": "The status of the ticket"
-        },
-        "createdAt": {
-          "type": "string",
-          "format": "date-time",
-          "description": "The creation time of the ticket"
-        },
-        "updatedAt": {
-          "type": "string",
-          "format": "date-time",
-          "description": "The last update time of the ticket"
-        }
-      },
-      "required": ["userId", "subject", "status", "createdAt", "updatedAt"]
-    },
-    "Message": {
-      "title": "Message",
-      "description": "A message within a support ticket",
-      "type": "object",
-      "properties": {
-        "senderId": {
-          "type": "string",
-          "description": "The ID of the sender"
-        },
-        "senderRole": {
-          "type": "string",
-          "enum": ["user", "admin"],
-          "description": "The role of the sender"
-        },
-        "text": {
-          "type": "string",
-          "description": "The text of the message"
-        },
-        "createdAt": {
-          "type": "string",
-          "format": "date-time",
-          "description": "The creation time of the message"
-        }
-      },
-      "required": ["senderId", "senderRole", "text", "createdAt"]
+      "required": ["title", "content", "status", "ownerUid", "createdAt"]
     },
     "Settings": {
       "title": "Settings",
-      "description": "User specific settings",
+      "description": "User specific settings and OAuth tokens",
       "type": "object",
       "properties": {
-        "smtp": {
+        "bloggerTokens": {
           "type": "object",
           "properties": {
-            "host": { "type": "string" },
-            "port": { "type": "string" },
-            "user": { "type": "string" },
-            "pass": { "type": "string" }
+            "access_token": { "type": "string" },
+            "refresh_token": { "type": "string" },
+            "expiry_date": { "type": "number" }
           }
         },
-        "updatedAt": {
-          "type": "string",
-          "format": "date-time"
-        }
+        "defaultKeywords": { "type": "array", "items": { "type": "string" } },
+        "updatedAt": { "type": "string", "format": "date-time" }
       }
     }
   },
   "firestore": {
     "/users/{userId}": {
-      "schema": {
-        "$ref": "#/entities/User"
-      },
-      "description": "The users collection"
+      "schema": { "$ref": "#/entities/User" },
+      "description": "User profiles"
     },
-    "/stores/{storeId}": {
-      "schema": {
-        "$ref": "#/entities/Store"
-      },
-      "description": "The stores collection"
+    "/blogs/{blogId}": {
+      "schema": { "$ref": "#/entities/Blog" },
+      "description": "Connected Blogger blogs"
     },
-    "/events/{eventId}": {
-      "schema": {
-        "$ref": "#/entities/TrackingEvent"
-      },
-      "description": "The tracking events collection"
-    },
-    "/tickets/{ticketId}": {
-      "schema": {
-        "$ref": "#/entities/Ticket"
-      },
-      "description": "The support tickets collection"
-    },
-    "/tickets/{ticketId}/messages/{messageId}": {
-      "schema": {
-        "$ref": "#/entities/Message"
-      },
-      "description": "The messages within a support ticket"
+    "/articles/{articleId}": {
+      "schema": { "$ref": "#/entities/Article" },
+      "description": "Generated articles"
     },
     "/settings/{userId}": {
-      "schema": {
-        "$ref": "#/entities/Settings"
-      },
-      "description": "User specific settings"
+      "schema": { "$ref": "#/entities/Settings" },
+      "description": "User settings and tokens"
     }
   }
 }

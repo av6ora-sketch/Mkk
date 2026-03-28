@@ -11,8 +11,8 @@ interface LanguageContextType {
 const translations: Record<Language, Record<string, string>> = {
   en: {
     // General
-    'app.name': 'Avbora',
-    'app.description': 'Turn Visitors into Customers',
+    'app.name': 'Blogger AI',
+    'app.description': 'Generate and Schedule AI Articles',
     'nav.about': 'About Us',
     'nav.howItWorks': 'How it Works',
     'nav.features': 'Features',
@@ -24,12 +24,9 @@ const translations: Record<Language, Record<string, string>> = {
     
     // Dashboard Sidebar
     'sidebar.overview': 'Overview',
-    'sidebar.stores': 'Stores',
-    'sidebar.analytics': 'Analytics',
-    'sidebar.reports': 'Reports',
-    'sidebar.plans': 'Plans',
-    'sidebar.profile': 'Profile',
-    'sidebar.support': 'Support',
+    'sidebar.blogs': 'Blogs',
+    'sidebar.generate': 'Generate Article',
+    'sidebar.articles': 'My Articles',
     'sidebar.settings': 'Settings',
     
     // Profile
@@ -147,8 +144,8 @@ const translations: Record<Language, Record<string, string>> = {
   },
   ar: {
     // General
-    'app.name': 'Avbora',
-    'app.description': 'حوّل زوارك إلى عملاء',
+    'app.name': 'Blogger AI',
+    'app.description': 'إنشاء وجدولة المقالات بالذكاء الاصطناعي',
     'nav.about': 'من نحن',
     'nav.howItWorks': 'كيف يعمل',
     'nav.features': 'المميزات',
@@ -160,12 +157,9 @@ const translations: Record<Language, Record<string, string>> = {
     
     // Dashboard Sidebar
     'sidebar.overview': 'نظرة عامة',
-    'sidebar.stores': 'المتاجر',
-    'sidebar.analytics': 'التحليلات',
-    'sidebar.reports': 'التقارير',
-    'sidebar.plans': 'الباقات',
-    'sidebar.profile': 'حسابي',
-    'sidebar.support': 'الدعم الفني',
+    'sidebar.blogs': 'المدونات',
+    'sidebar.generate': 'إنشاء مقال',
+    'sidebar.articles': 'مقالاتي',
     'sidebar.settings': 'الإعدادات',
     
     // Profile

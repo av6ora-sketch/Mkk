@@ -23,6 +23,10 @@ const DashboardBlogs = lazy(() => import("./pages/dashboard/Blogs"));
 const DashboardGenerate = lazy(() => import("./pages/dashboard/Generate"));
 const DashboardArticles = lazy(() => import("./pages/dashboard/Articles"));
 const DashboardSettings = lazy(() => import("./pages/dashboard/Settings"));
+const DashboardMedia = lazy(() => import("./pages/dashboard/Media"));
+const DashboardAccount = lazy(() => import("./pages/dashboard/MyAccount"));
+const DashboardSubscriptions = lazy(() => import("./pages/dashboard/Subscriptions"));
+const DashboardSupport = lazy(() => import("./pages/dashboard/Support"));
 
 const LoadingFallback = () => (
   <div className="min-h-screen flex items-center justify-center bg-background">
@@ -52,6 +56,10 @@ export default function App() {
               <Route path="generate" element={<DashboardGenerate />} />
               <Route path="articles" element={<DashboardArticles />} />
               <Route path="settings" element={<DashboardSettings />} />
+              <Route path="media" element={<DashboardMedia />} />
+              <Route path="account" element={<DashboardAccount />} />
+              <Route path="subscriptions" element={<DashboardSubscriptions />} />
+              <Route path="support" element={<DashboardSupport />} />
             </Route>
 
             {/* Fallback */}

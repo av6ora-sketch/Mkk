@@ -4,7 +4,7 @@ import { auth, db } from "../../firebase";
 import { collection, query, where, getDocs, limit, orderBy } from "firebase/firestore";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
-import { Loader2, FileText, Store, Calendar, ArrowRight, Wand2 } from "lucide-react";
+import { Loader2, FileText, Store, TrendingUp, Clock, ArrowRight, Plus, User } from "lucide-react";
 import { Link } from "react-router-dom";
 
 export default function Overview() {
@@ -12,20 +12,19 @@ export default function Overview() {
   const [stats, setStats] = useState({ blogs: 0, articles: 0, scheduled: 0 });
   const [recentArticles, setRecentArticles] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasBlogs, setHasBlogs] = useState(true);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
-      if (!auth.currentUser) {
-        console.log("No current user found in Overview");
-        return;
-      }
-      console.log("Fetching overview data for user:", auth.currentUser.uid);
+      if (!auth.currentUser) return;
+      
       setIsLoading(true);
       try {
         const blogsSnap = await getDocs(query(collection(db, "blogs"), where("ownerUid", "==", auth.currentUser.uid)));
-        console.log("Blogs fetched:", blogsSnap.size);
+        setHasBlogs(blogsSnap.size > 0);
+        
         const articlesSnap = await getDocs(query(collection(db, "articles"), where("ownerUid", "==", auth.currentUser.uid)));
-        console.log("Articles fetched:", articlesSnap.size);
         const scheduledSnap = await getDocs(query(collection(db, "articles"), where("ownerUid", "==", auth.currentUser.uid), where("status", "==", "scheduled")));
         
         setStats({
@@ -41,6 +40,13 @@ export default function Overview() {
           limit(5)
         ));
         setRecentArticles(recentSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+
+        const userDoc = await getDocs(query(collection(db, "users"), where("__name__", "==", auth.currentUser.uid)));
+        if (!userDoc.empty) {
+          setAvatarUrl(userDoc.docs[0].data().avatarUrl || auth.currentUser.photoURL);
+        } else {
+          setAvatarUrl(auth.currentUser.photoURL);
+        }
       } catch (error) {
         console.error("Error fetching overview data:", error);
       } finally {
@@ -58,88 +64,157 @@ export default function Overview() {
     );
   }
 
+  const userName = auth.currentUser?.displayName || auth.currentUser?.email?.split('@')[0] || 'User';
+
   return (
-    <div className="space-y-8">
-      <div>
-        <h2 className="text-3xl font-bold tracking-tight">{t('overview.welcome')}</h2>
-        <p className="text-muted-foreground">Manage your Blogger AI content from one place.</p>
+    <div className="space-y-8 max-w-6xl mx-auto">
+      {!hasBlogs && (
+        <div className="bg-card border rounded-2xl p-8 text-center flex flex-col items-center justify-center shadow-sm">
+          <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center mb-6 overflow-hidden border-4 border-background shadow-sm">
+            {avatarUrl ? (
+              <img src={avatarUrl} alt="Avatar" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
+            ) : (
+              <User className="h-10 w-10 text-primary/50" />
+            )}
+          </div>
+          <h2 className="text-2xl font-bold mb-2">{t('overview.notConnected')}</h2>
+          <p className="text-muted-foreground max-w-md mx-auto mb-6">
+            {t('overview.notConnectedDesc')}
+          </p>
+          <Button asChild size="lg" className="rounded-full px-8">
+            <Link to="/dashboard/settings">{t('overview.connectNow')}</Link>
+          </Button>
+        </div>
+      )}
+
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight mb-1">
+            {t('overview.welcome')}، {userName} 👋
+          </h2>
+          <p className="text-muted-foreground">{t('overview.description')}</p>
+        </div>
+        <Button asChild className="rounded-full shrink-0">
+          <Link to="/dashboard/generate">
+            <Plus className="h-4 w-4 mr-2" />
+            {t('overview.newArticle')}
+          </Link>
+        </Button>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card className="rounded-2xl border-none shadow-sm bg-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Connected Blogs</CardTitle>
-            <Store className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t('overview.active')}</CardTitle>
+            <div className="h-8 w-8 rounded-full bg-blue-500/10 flex items-center justify-center">
+              <FileText className="h-4 w-4 text-blue-500" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.blogs}</div>
-            <p className="text-xs text-muted-foreground">Active Blogger accounts</p>
+            <p className="text-sm font-medium mb-1">{t('overview.totalArticles')}</p>
+            <div className="text-3xl font-bold">{stats.articles}</div>
           </CardContent>
         </Card>
-        <Card>
+        
+        <Card className="rounded-2xl border-none shadow-sm bg-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Articles</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t('overview.active')}</CardTitle>
+            <div className="h-8 w-8 rounded-full bg-green-500/10 flex items-center justify-center">
+              <Store className="h-4 w-4 text-green-500" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.articles}</div>
-            <p className="text-xs text-muted-foreground">Generated by AI</p>
+            <p className="text-sm font-medium mb-1">{t('overview.connectedBlogs')}</p>
+            <div className="text-3xl font-bold">{stats.blogs}</div>
           </CardContent>
         </Card>
-        <Card>
+
+        <Card className="rounded-2xl border-none shadow-sm bg-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Scheduled Posts</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t('overview.estimated')}</CardTitle>
+            <div className="h-8 w-8 rounded-full bg-purple-500/10 flex items-center justify-center">
+              <TrendingUp className="h-4 w-4 text-purple-500" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.scheduled}</div>
-            <p className="text-xs text-muted-foreground">Waiting to be published</p>
+            <p className="text-sm font-medium mb-1">{t('overview.estimatedTraffic')}</p>
+            <div className="text-3xl font-bold">{stats.articles * 150}</div>
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-2xl border-none shadow-sm bg-card">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t('overview.comparedToManual')}</CardTitle>
+            <div className="h-8 w-8 rounded-full bg-orange-500/10 flex items-center justify-center">
+              <Clock className="h-4 w-4 text-orange-500" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm font-medium mb-1">{t('overview.timeSaved')}</p>
+            <div className="text-3xl font-bold">{stats.articles * 2} {t('overview.hours')}</div>
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-        <Card className="md:col-span-2 lg:col-span-4">
-          <CardHeader>
-            <CardTitle>Recent Articles</CardTitle>
+      <div className="grid gap-6 md:grid-cols-3">
+        <Card className="md:col-span-2 rounded-2xl border-none shadow-sm bg-card">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <div>
+              <CardTitle className="text-xl">{t('overview.recentArticles')}</CardTitle>
+              <p className="text-sm text-muted-foreground mt-1">{t('overview.recentArticlesDesc')}</p>
+            </div>
+            <Button variant="ghost" size="sm" asChild className="hidden sm:flex">
+              <Link to="/dashboard/articles" className="text-primary">
+                {t('overview.viewAll')} <ArrowRight className="h-4 w-4 ml-1 rtl:rotate-180" />
+              </Link>
+            </Button>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
+            <div className="space-y-4 mt-4">
               {recentArticles.length > 0 ? (
                 recentArticles.map((article) => (
-                  <div key={article.id} className="flex items-center justify-between border-b pb-4 last:border-0 last:pb-0">
+                  <div key={article.id} className="flex items-center justify-between p-4 rounded-xl border bg-card hover:bg-muted/50 transition-colors">
                     <div className="space-y-1">
-                      <p className="text-sm font-medium leading-none">{article.title}</p>
-                      <p className="text-xs text-muted-foreground capitalize">{article.status}</p>
+                      <p className="font-medium line-clamp-1">{article.title}</p>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <span className={`px-2 py-0.5 rounded-full ${
+                          article.status === 'published' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
+                          article.status === 'scheduled' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
+                          'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+                        }`}>
+                          {article.status}
+                        </span>
+                        <span>•</span>
+                        <span>{new Date(article.createdAt).toLocaleDateString()}</span>
+                      </div>
                     </div>
-                    <Link to="/dashboard/articles" className="text-xs text-primary hover:underline flex items-center gap-1">
-                      View <ArrowRight className="h-3 w-3" />
-                    </Link>
                   </div>
                 ))
               ) : (
-                <p className="text-sm text-muted-foreground text-center py-4">No articles generated yet.</p>
+                <div className="text-center py-8 border rounded-xl border-dashed">
+                  <FileText className="h-8 w-8 text-muted-foreground mx-auto mb-3 opacity-50" />
+                  <p className="text-sm text-muted-foreground">{t('overview.noArticles')} <Link to="/dashboard/generate" className="text-primary hover:underline">{t('overview.noArticlesHere')}</Link></p>
+                </div>
               )}
             </div>
+            <Button variant="outline" className="w-full mt-4 sm:hidden" asChild>
+              <Link to="/dashboard/articles">{t('overview.viewAll')}</Link>
+            </Button>
           </CardContent>
         </Card>
 
-        <Card className="md:col-span-2 lg:col-span-3">
+        <Card className="rounded-2xl border-none shadow-sm bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
           <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
+            <CardTitle className="text-lg flex items-center gap-2">
+              💡 {t('overview.tipOfDay')}
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Button className="w-full justify-start" asChild>
-              <Link to="/dashboard/generate">
-                <Wand2 className="h-4 w-4 mr-2" />
-                Generate New Article
-              </Link>
-            </Button>
-            <Button variant="outline" className="w-full justify-start" asChild>
-              <Link to="/dashboard/blogs">
-                <Store className="h-4 w-4 mr-2" />
-                Connect Another Blog
-              </Link>
+            <p className="text-sm leading-relaxed font-medium">
+              {t('overview.tipText')}
+            </p>
+            <Button variant="link" className="px-0 text-primary h-auto font-semibold">
+              {t('overview.discoverMore')} <ArrowRight className="h-4 w-4 ml-1 rtl:rotate-180" />
             </Button>
           </CardContent>
         </Card>

@@ -47,7 +47,7 @@ export default function Articles() {
   }, []);
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm("Are you sure you want to delete this article?")) return;
+    if (!window.confirm(t('articles.confirmDelete'))) return;
     try {
       await deleteDoc(doc(db, "articles", id));
       await fetchArticles();
@@ -67,8 +67,8 @@ export default function Articles() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-3xl font-bold tracking-tight">{t('sidebar.articles')}</h2>
-        <p className="text-muted-foreground">Manage your generated and scheduled articles.</p>
+        <h2 className="text-3xl font-bold tracking-tight">{t('articles.title')}</h2>
+        <p className="text-muted-foreground">{t('articles.description')}</p>
       </div>
 
       {isLoading ? (
@@ -108,7 +108,7 @@ export default function Articles() {
                           className="flex items-center gap-1 text-primary hover:underline font-medium"
                         >
                           <ExternalLink className="h-3 w-3" />
-                          View on Blogger
+                          {t('articles.viewOnBlogger')}
                         </a>
                       )}
                     </div>
@@ -127,10 +127,10 @@ export default function Articles() {
             <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center mb-4">
               <FileText className="h-6 w-6 text-muted-foreground" />
             </div>
-            <h3 className="text-lg font-semibold">No articles yet</h3>
-            <p className="text-muted-foreground mb-6">Start by generating your first AI article.</p>
+            <h3 className="text-lg font-semibold">{t('articles.noArticles')}</h3>
+            <p className="text-muted-foreground mb-6">{t('articles.noArticlesDesc')}</p>
             <Button asChild>
-              <a href="/dashboard/generate">Generate Article</a>
+              <a href="/dashboard/generate">{t('articles.generateBtn')}</a>
             </Button>
           </CardContent>
         </Card>

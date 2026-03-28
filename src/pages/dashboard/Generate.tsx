@@ -118,18 +118,18 @@ export default function Generate() {
   return (
     <div className="max-w-4xl mx-auto space-y-8">
       <div>
-        <h2 className="text-3xl font-bold tracking-tight">{t('sidebar.generate')}</h2>
-        <p className="text-muted-foreground">Create high-quality AI articles and schedule them for your blog.</p>
+        <h2 className="text-3xl font-bold tracking-tight">{t('generate.title')}</h2>
+        <p className="text-muted-foreground">{t('generate.description')}</p>
       </div>
 
       <div className="grid gap-6 md:grid-cols-3">
         <Card className="md:col-span-1">
           <CardHeader>
-            <CardTitle>Article Settings</CardTitle>
+            <CardTitle>{t('generate.settings')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Select Blog</label>
+              <label className="text-sm font-medium">{t('generate.selectBlog')}</label>
               <select 
                 className="w-full p-2 border rounded-md bg-background"
                 value={selectedBlog}
@@ -141,7 +141,7 @@ export default function Generate() {
               </select>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Keywords (comma separated)</label>
+              <label className="text-sm font-medium">{t('generate.keywords')}</label>
               <input 
                 className="w-full p-2 border rounded-md bg-background"
                 placeholder="SEO, AI, Marketing"
@@ -150,7 +150,7 @@ export default function Generate() {
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Schedule Date & Time</label>
+              <label className="text-sm font-medium">{t('generate.scheduleDate')}</label>
               <input 
                 type="datetime-local"
                 className="w-full p-2 border rounded-md bg-background"
@@ -163,12 +163,12 @@ export default function Generate() {
 
         <Card className="md:col-span-2">
           <CardHeader>
-            <CardTitle>What should the article be about?</CardTitle>
+            <CardTitle>{t('generate.promptTitle')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <textarea 
               className="w-full min-h-[150px] p-4 border rounded-md bg-background resize-none"
-              placeholder="Describe the topic, tone, and key points..."
+              placeholder={t('generate.promptPlaceholder')}
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
             />
@@ -178,7 +178,7 @@ export default function Generate() {
               disabled={isGenerating || !prompt}
             >
               {isGenerating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Wand2 className="h-4 w-4 mr-2" />}
-              Generate Article
+              {t('generate.generateBtn')}
             </Button>
           </CardContent>
         </Card>
@@ -187,7 +187,7 @@ export default function Generate() {
       {success && (
         <div className="bg-green-50 border border-green-200 text-green-700 p-4 rounded-lg flex items-center gap-3">
           <CheckCircle2 className="h-5 w-5" />
-          <span>Article saved successfully!</span>
+          <span>{t('generate.success')}</span>
         </div>
       )}
 
@@ -198,14 +198,14 @@ export default function Generate() {
             <div className="flex flex-wrap gap-2">
               <Button variant="outline" onClick={() => handleSave('draft')} disabled={isSaving}>
                 <Save className="h-4 w-4 mr-2" />
-                Save Draft
+                {t('generate.saveDraft')}
               </Button>
               <Button variant="secondary" onClick={() => handleSave('scheduled')} disabled={isSaving || !scheduleDate}>
                 <Calendar className="h-4 w-4 mr-2" />
-                Schedule
+                {t('generate.schedule')}
               </Button>
               <Button onClick={() => handleSave('published')} disabled={isSaving}>
-                Publish Now
+                {t('generate.publishNow')}
               </Button>
             </div>
           </CardHeader>

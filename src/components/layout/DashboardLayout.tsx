@@ -13,7 +13,8 @@ import {
   Menu,
   X,
   Loader2,
-  Settings
+  Settings,
+  Image as ImageIcon
 } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { Button } from "../ui/button";
@@ -49,10 +50,12 @@ export default function DashboardLayout() {
 
   const sidebarLinks = [
     { name: t('sidebar.overview'), href: "/dashboard", icon: LayoutDashboard },
-    { name: t('sidebar.blogs'), href: "/dashboard/blogs", icon: Store },
-    { name: t('sidebar.generate'), href: "/dashboard/generate", icon: Activity },
     { name: t('sidebar.articles'), href: "/dashboard/articles", icon: FileText },
-    { name: t('sidebar.settings'), href: "/dashboard/settings", icon: Settings },
+    { name: t('sidebar.media'), href: "/dashboard/media", icon: ImageIcon },
+    { name: t('sidebar.account'), href: "/dashboard/account", icon: User },
+    { name: t('sidebar.blogSettings'), href: "/dashboard/settings", icon: Settings },
+    { name: t('sidebar.subscriptions'), href: "/dashboard/subscriptions", icon: CreditCard },
+    { name: t('sidebar.support'), href: "/dashboard/support", icon: LifeBuoy },
   ];
 
   if (isLoading) {

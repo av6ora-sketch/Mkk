@@ -3,7 +3,7 @@ import { createServer as createViteServer } from "vite";
 import path from "path";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";
-import { initializeApp, getApps } from "firebase-admin/app";
+import { initializeApp, getApps, applicationDefault } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import fs from "fs";
 import { google } from "googleapis";
@@ -22,6 +22,7 @@ let adminApp;
 try {
   if (getApps().length === 0) {
     adminApp = initializeApp({
+      credential: applicationDefault(),
       projectId: firebaseConfig.projectId
     });
     console.log("Firebase Admin initialized with Project ID from config:", firebaseConfig.projectId);
@@ -34,6 +35,17 @@ try {
 
 // Use named database if provided, otherwise fallback to default
 const db = getFirestore(adminApp, firebaseConfig.firestoreDatabaseId || "(default)");
+
+let serviceAccountEmail = "unknown";
+fetch("http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/email", {
+  headers: { "Metadata-Flavor": "Google" }
+})
+  .then(res => res.text())
+  .then(email => {
+    serviceAccountEmail = email;
+    console.log("Service Account Email:", email);
+  })
+  .catch(() => console.log("Could not fetch service account email (not running in GCP/Cloud Run)."));
 
 // Test connection to Firestore Admin on startup
 async function testAdminConnection() {
@@ -95,7 +107,8 @@ async function startServer() {
       },
       firestoreAdmin: "unknown",
       projectId: firebaseConfig.projectId,
-      databaseId: firebaseConfig.firestoreDatabaseId || "(default)"
+      databaseId: firebaseConfig.firestoreDatabaseId || "(default)",
+      serviceAccount: serviceAccountEmail
     };
 
     try {
@@ -119,21 +132,45 @@ async function startServer() {
       'https://www.googleapis.com/auth/userinfo.email'
     ];
 
-    const url = oauth2Client.generateAuthUrl({
+    // Determine the correct redirect URI based on the incoming request's origin
+    const host = req.headers['x-forwarded-host'] || req.get('host');
+    const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'https';
+    const redirectUri = `${protocol}://${host}/auth/callback`;
+
+    // Create a temporary OAuth client with the dynamic redirect URI
+    const tempOauth2Client = new google.auth.OAuth2(
+      process.env.GOOGLE_CLIENT_ID,
+      process.env.GOOGLE_CLIENT_SECRET,
+      redirectUri
+    );
+
+    const url = tempOauth2Client.generateAuthUrl({
       access_type: 'offline',
       scope: scopes,
       prompt: 'consent'
     });
 
-    res.json({ url });
+    res.json({ url, redirectUri });
   });
 
   app.get("/auth/callback", async (req, res) => {
     const { code, state } = req.query;
     const userId = state as string; // We'll pass userId in state from client
 
+    // Determine the correct redirect URI based on the incoming request's origin
+    const host = req.headers['x-forwarded-host'] || req.get('host');
+    const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'https';
+    const redirectUri = `${protocol}://${host}/auth/callback`;
+
+    // Create a temporary OAuth client with the dynamic redirect URI
+    const tempOauth2Client = new google.auth.OAuth2(
+      process.env.GOOGLE_CLIENT_ID,
+      process.env.GOOGLE_CLIENT_SECRET,
+      redirectUri
+    );
+
     try {
-      const { tokens } = await oauth2Client.getToken(code as string);
+      const { tokens } = await tempOauth2Client.getToken(code as string);
       
       // Store tokens in Firestore for this user
       if (userId) {

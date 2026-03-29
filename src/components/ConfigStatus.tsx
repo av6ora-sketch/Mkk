@@ -15,6 +15,7 @@ interface HealthStatus {
   firestoreErrorCode?: number;
   projectId: string;
   databaseId: string;
+  serviceAccount?: string;
 }
 
 export default function ConfigStatus() {
@@ -97,13 +98,27 @@ export default function ConfigStatus() {
                 : `Failed to connect to Firestore (Project: ${status.projectId}).`}
             </p>
             {status.firestoreErrorCode === 7 && (
-              <div className="bg-destructive/10 p-2 rounded text-[10px] text-destructive font-mono">
-                {language === 'ar'
-                  ? 'PERMISSION_DENIED: يرجى التأكد من أن حساب الخدمة لديه دور "Cloud Datastore User".'
-                  : 'PERMISSION_DENIED: Ensure the service account has the "Cloud Datastore User" role.'}
+              <div className="bg-destructive/10 p-3 rounded text-xs text-destructive font-mono space-y-2">
+                <p>
+                  {language === 'ar'
+                    ? 'PERMISSION_DENIED: حساب الخدمة الخاص بالخادم ليس لديه صلاحيات للوصول إلى قاعدة البيانات هذه.'
+                    : 'PERMISSION_DENIED: The server service account does not have permission to access this database.'}
+                </p>
+                <p className="font-bold">
+                  {language === 'ar' ? 'يرجى نسخ هذا البريد الإلكتروني:' : 'Please copy this email:'}
+                  <br/>
+                  <span className="select-all bg-background/50 p-1 rounded mt-1 block border border-destructive/20 break-all">
+                    {status.serviceAccount || 'Loading...'}
+                  </span>
+                </p>
+                <p>
+                  {language === 'ar'
+                    ? `وانتقل إلى Google Cloud IAM للمشروع (${status.projectId}) وقم بإضافته مع دور "Cloud Datastore User".`
+                    : `And go to Google Cloud IAM for project (${status.projectId}) and add it with the "Cloud Datastore User" role.`}
+                </p>
               </div>
             )}
-            <p className="text-[10px] text-muted-foreground">
+            <p className="text-[10px] text-muted-foreground break-all">
               {status.firestoreError}
             </p>
           </div>

@@ -5,6 +5,7 @@ import { collection, query, where, getDocs, addDoc } from "firebase/firestore";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 import { Loader2, ExternalLink, RefreshCw, Plus } from "lucide-react";
+import { handleFirestoreError, OperationType } from "../../lib/firestore-error";
 
 interface Blog {
   id: string;
@@ -22,8 +23,15 @@ export default function Blogs() {
     if (!auth.currentUser) return;
     setIsLoading(true);
     try {
-      const q = query(collection(db, "blogs"), where("ownerUid", "==", auth.currentUser.uid));
-      const querySnapshot = await getDocs(q);
+      const path = "blogs";
+      const q = query(collection(db, path), where("ownerUid", "==", auth.currentUser.uid));
+      let querySnapshot;
+      try {
+        querySnapshot = await getDocs(q);
+      } catch (e) {
+        handleFirestoreError(e, OperationType.GET, path);
+        return;
+      }
       const blogsData = querySnapshot.docs.map(doc => doc.data() as Blog);
       setBlogs(blogsData);
     } catch (error) {
@@ -72,17 +80,28 @@ export default function Blogs() {
       
       if (Array.isArray(remoteBlogs)) {
         // Save new blogs to Firestore
+        const path = "blogs";
         for (const blog of remoteBlogs) {
-          const q = query(collection(db, "blogs"), where("id", "==", blog.id));
-          const snap = await getDocs(q);
+          const q = query(collection(db, path), where("id", "==", blog.id));
+          let snap;
+          try {
+            snap = await getDocs(q);
+          } catch (e) {
+            handleFirestoreError(e, OperationType.GET, path);
+            continue;
+          }
           if (snap.empty) {
-            await addDoc(collection(db, "blogs"), {
-              id: blog.id,
-              title: blog.name,
-              url: blog.url,
-              ownerUid: auth.currentUser.uid,
-              createdAt: new Date().toISOString()
-            });
+            try {
+              await addDoc(collection(db, path), {
+                id: blog.id,
+                title: blog.name,
+                url: blog.url,
+                ownerUid: auth.currentUser.uid,
+                createdAt: new Date().toISOString()
+              });
+            } catch (e) {
+              handleFirestoreError(e, OperationType.CREATE, path);
+            }
           }
         }
         await fetchBlogs();

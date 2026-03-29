@@ -4,7 +4,8 @@ import { auth, db } from "../../firebase";
 import { doc, getDoc, deleteDoc, collection, query, where, getDocs, addDoc } from "firebase/firestore";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
-import { Loader2, ShieldCheck, ShieldAlert, LogOut, RefreshCw, Store, ExternalLink } from "lucide-react";
+import { Loader2, ShieldCheck, ShieldAlert, LogOut, RefreshCw, Store, ExternalLink, AlertTriangle } from "lucide-react";
+import { handleFirestoreError, OperationType } from "../../lib/firestore-error";
 
 interface Blog {
   id: string;
@@ -18,12 +19,20 @@ export default function Settings() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   const [blogs, setBlogs] = useState<Blog[]>([]);
+  const [showDisconnectConfirm, setShowDisconnectConfirm] = useState(false);
 
   const fetchBlogs = async () => {
     if (!auth.currentUser) return;
     try {
-      const q = query(collection(db, "blogs"), where("ownerUid", "==", auth.currentUser.uid));
-      const querySnapshot = await getDocs(q);
+      const path = "blogs";
+      const q = query(collection(db, path), where("ownerUid", "==", auth.currentUser.uid));
+      let querySnapshot;
+      try {
+        querySnapshot = await getDocs(q);
+      } catch (e) {
+        handleFirestoreError(e, OperationType.GET, path);
+        return;
+      }
       const blogsData = querySnapshot.docs.map(doc => doc.data() as Blog);
       setBlogs(blogsData);
     } catch (error) {
@@ -35,7 +44,14 @@ export default function Settings() {
     const checkStatus = async () => {
       if (!auth.currentUser) return;
       try {
-        const settingsSnap = await getDoc(doc(db, "settings", auth.currentUser.uid));
+        const path = "settings";
+        let settingsSnap;
+        try {
+          settingsSnap = await getDoc(doc(db, path, auth.currentUser.uid));
+        } catch (e) {
+          handleFirestoreError(e, OperationType.GET, `${path}/${auth.currentUser.uid}`);
+          return;
+        }
         setIsConnected(!!settingsSnap.data()?.bloggerTokens);
         if (settingsSnap.data()?.bloggerTokens) {
           await fetchBlogs();
@@ -58,12 +74,19 @@ export default function Settings() {
   }, []);
 
   const handleDisconnect = async () => {
-    if (!auth.currentUser || !window.confirm(t('blogSettings.confirmDisconnect'))) return;
+    if (!auth.currentUser) return;
     setIsLoading(true);
     try {
-      await deleteDoc(doc(db, "settings", auth.currentUser.uid));
+      const path = "settings";
+      try {
+        await deleteDoc(doc(db, path, auth.currentUser.uid));
+      } catch (e) {
+        handleFirestoreError(e, OperationType.DELETE, `${path}/${auth.currentUser.uid}`);
+        return;
+      }
       setIsConnected(false);
       setBlogs([]);
+      setShowDisconnectConfirm(false);
     } catch (error) {
       console.error("Error disconnecting Blogger:", error);
     } finally {
@@ -91,17 +114,28 @@ export default function Settings() {
       const remoteBlogs = await response.json();
       
       if (Array.isArray(remoteBlogs)) {
+        const path = "blogs";
         for (const blog of remoteBlogs) {
-          const q = query(collection(db, "blogs"), where("id", "==", blog.id));
-          const snap = await getDocs(q);
+          const q = query(collection(db, path), where("id", "==", blog.id));
+          let snap;
+          try {
+            snap = await getDocs(q);
+          } catch (e) {
+            handleFirestoreError(e, OperationType.GET, path);
+            continue;
+          }
           if (snap.empty) {
-            await addDoc(collection(db, "blogs"), {
-              id: blog.id,
-              title: blog.name,
-              url: blog.url,
-              ownerUid: auth.currentUser.uid,
-              createdAt: new Date().toISOString()
-            });
+            try {
+              await addDoc(collection(db, path), {
+                id: blog.id,
+                title: blog.name,
+                url: blog.url,
+                ownerUid: auth.currentUser.uid,
+                createdAt: new Date().toISOString()
+              });
+            } catch (e) {
+              handleFirestoreError(e, OperationType.CREATE, path);
+            }
           }
         }
         await fetchBlogs();
@@ -145,7 +179,7 @@ export default function Settings() {
               </div>
             </div>
             {isConnected ? (
-              <Button variant="outline" size="sm" onClick={handleDisconnect} disabled={isLoading} className="w-full sm:w-auto shrink-0">
+              <Button variant="outline" size="sm" onClick={() => setShowDisconnectConfirm(true)} disabled={isLoading} className="w-full sm:w-auto shrink-0">
                 {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogOut className="h-4 w-4 mr-2" />}
                 {t('blogSettings.disconnect')}
               </Button>
@@ -155,6 +189,33 @@ export default function Settings() {
           </div>
         </CardContent>
       </Card>
+
+      {showDisconnectConfirm && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <Card className="w-full max-w-md shadow-lg animate-in fade-in zoom-in duration-200">
+            <CardHeader className="text-center">
+              <div className="mx-auto h-12 w-12 rounded-full bg-red-100 flex items-center justify-center mb-4">
+                <AlertTriangle className="h-6 w-6 text-red-600" />
+              </div>
+              <CardTitle className="text-xl">{t('blogSettings.confirmDisconnect')}</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-4">
+              <p className="text-center text-muted-foreground">
+                {t('blogSettings.confirmDisconnectDesc') || "Are you sure you want to disconnect your Blogger account? You will no longer be able to generate or schedule articles."}
+              </p>
+              <div className="flex gap-3 mt-2">
+                <Button variant="outline" className="flex-1 rounded-full" onClick={() => setShowDisconnectConfirm(false)} disabled={isLoading}>
+                  {t('common.cancel')}
+                </Button>
+                <Button variant="destructive" className="flex-1 rounded-full" onClick={handleDisconnect} disabled={isLoading}>
+                  {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <LogOut className="h-4 w-4 mr-2" />}
+                  {t('blogSettings.disconnect')}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {isConnected && (
         <Card>

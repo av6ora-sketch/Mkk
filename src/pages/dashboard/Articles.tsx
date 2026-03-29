@@ -4,8 +4,9 @@ import { auth, db } from "../../firebase";
 import { collection, query, where, getDocs, orderBy, deleteDoc, doc } from "firebase/firestore";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
-import { Loader2, Trash2, Calendar, CheckCircle2, Clock, FileText, ExternalLink } from "lucide-react";
+import { Loader2, Trash2, Calendar, CheckCircle2, Clock, FileText, ExternalLink, AlertTriangle } from "lucide-react";
 import { format } from "date-fns";
+import { handleFirestoreError, OperationType } from "../../lib/firestore-error";
 
 interface Article {
   id: string;
@@ -22,17 +23,26 @@ export default function Articles() {
   const { t } = useLanguage();
   const [articles, setArticles] = useState<Article[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const fetchArticles = async () => {
     if (!auth.currentUser) return;
     setIsLoading(true);
     try {
+      const path = "articles";
       const q = query(
-        collection(db, "articles"), 
+        collection(db, path), 
         where("ownerUid", "==", auth.currentUser.uid),
         orderBy("createdAt", "desc")
       );
-      const querySnapshot = await getDocs(q);
+      let querySnapshot;
+      try {
+        querySnapshot = await getDocs(q);
+      } catch (e) {
+        handleFirestoreError(e, OperationType.GET, path);
+        return;
+      }
       const articlesData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Article));
       setArticles(articlesData);
     } catch (error) {
@@ -46,13 +56,23 @@ export default function Articles() {
     fetchArticles();
   }, []);
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm(t('articles.confirmDelete'))) return;
+  const handleDelete = async () => {
+    if (!deleteId) return;
+    setIsDeleting(true);
     try {
-      await deleteDoc(doc(db, "articles", id));
+      const path = "articles";
+      try {
+        await deleteDoc(doc(db, path, deleteId));
+      } catch (e) {
+        handleFirestoreError(e, OperationType.DELETE, `${path}/${deleteId}`);
+        return;
+      }
+      setDeleteId(null);
       await fetchArticles();
     } catch (error) {
       console.error("Error deleting article:", error);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -114,7 +134,7 @@ export default function Articles() {
                     </div>
                   </div>
                 </div>
-                <Button variant="ghost" size="icon" onClick={() => handleDelete(article.id)} className="text-red-500 hover:text-red-600 hover:bg-red-50 shrink-0">
+                <Button variant="ghost" size="icon" onClick={() => setDeleteId(article.id)} className="text-red-500 hover:text-red-600 hover:bg-red-50 shrink-0">
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </CardHeader>
@@ -134,6 +154,33 @@ export default function Articles() {
             </Button>
           </CardContent>
         </Card>
+      )}
+
+      {deleteId && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <Card className="w-full max-w-md shadow-lg animate-in fade-in zoom-in duration-200">
+            <CardHeader className="text-center">
+              <div className="mx-auto h-12 w-12 rounded-full bg-red-100 flex items-center justify-center mb-4">
+                <AlertTriangle className="h-6 w-6 text-red-600" />
+              </div>
+              <CardTitle className="text-xl">{t('articles.confirmDelete')}</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-4">
+              <p className="text-center text-muted-foreground">
+                {t('articles.confirmDeleteDesc') || "Are you sure you want to delete this article? This action cannot be undone."}
+              </p>
+              <div className="flex gap-3 mt-2">
+                <Button variant="outline" className="flex-1 rounded-full" onClick={() => setDeleteId(null)} disabled={isDeleting}>
+                  {t('common.cancel')}
+                </Button>
+                <Button variant="destructive" className="flex-1 rounded-full" onClick={handleDelete} disabled={isDeleting}>
+                  {isDeleting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Trash2 className="h-4 w-4 mr-2" />}
+                  {t('common.delete')}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       )}
     </div>
   );

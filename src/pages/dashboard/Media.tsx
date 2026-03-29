@@ -4,7 +4,9 @@ import { auth, db, storage } from "../../firebase";
 import { collection, addDoc, query, where, orderBy, onSnapshot, deleteDoc, doc } from "firebase/firestore";
 import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
 import { Button } from "../../components/ui/button";
-import { Image as ImageIcon, Upload, Trash2, Loader2, Copy, Check } from "lucide-react";
+import { Image as ImageIcon, Upload, Trash2, Loader2, Copy, Check, AlertTriangle } from "lucide-react";
+import { handleFirestoreError, OperationType } from "../../lib/firestore-error";
+import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 
 interface MediaItem {
   id: string;
@@ -17,11 +19,13 @@ interface MediaItem {
 }
 
 export default function Media() {
-  const { t } = useLanguage();
+  const { language, t } = useLanguage();
   const [media, setMedia] = useState<MediaItem[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [deleteItem, setDeleteItem] = useState<MediaItem | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -39,6 +43,8 @@ export default function Media() {
         mediaData.push({ id: doc.id, ...doc.data() } as MediaItem);
       });
       setMedia(mediaData);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.GET, "media");
     });
 
     return () => unsubscribe();
@@ -68,15 +74,19 @@ export default function Media() {
       async () => {
         const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
         
-        await addDoc(collection(db, "media"), {
-          userId: auth.currentUser!.uid,
-          url: downloadURL,
-          name: file.name,
-          size: file.size,
-          type: file.type,
-          path: storagePath,
-          createdAt: new Date().toISOString()
-        });
+        try {
+          await addDoc(collection(db, "media"), {
+            userId: auth.currentUser!.uid,
+            url: downloadURL,
+            name: file.name,
+            size: file.size,
+            type: file.type,
+            path: storagePath,
+            createdAt: new Date().toISOString()
+          });
+        } catch (e) {
+          handleFirestoreError(e, OperationType.WRITE, "media");
+        }
         
         setIsUploading(false);
         setUploadProgress(0);
@@ -85,18 +95,26 @@ export default function Media() {
     );
   };
 
-  const handleDelete = async (item: MediaItem) => {
-    if (!confirm(t('media.confirmDelete'))) return;
+  const handleDelete = async () => {
+    if (!deleteItem) return;
     
+    setIsDeleting(true);
     try {
       // Delete from Storage
-      const storageRef = ref(storage, item.path);
+      const storageRef = ref(storage, deleteItem.path);
       await deleteObject(storageRef);
       
       // Delete from Firestore
-      await deleteDoc(doc(db, "media", item.id));
+      try {
+        await deleteDoc(doc(db, "media", deleteItem.id));
+      } catch (e) {
+        handleFirestoreError(e, OperationType.DELETE, `media/${deleteItem.id}`);
+      }
+      setDeleteItem(null);
     } catch (error) {
       console.error("Error deleting media:", error);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -182,7 +200,7 @@ export default function Media() {
                     size="icon" 
                     variant="destructive" 
                     className="h-8 w-8 rounded-full"
-                    onClick={() => handleDelete(item)}
+                    onClick={() => setDeleteItem(item)}
                     title="Delete"
                   >
                     <Trash2 className="h-4 w-4" />
@@ -195,6 +213,35 @@ export default function Media() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {deleteItem && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <Card className="w-full max-w-md shadow-lg animate-in fade-in zoom-in duration-200">
+            <CardHeader className="text-center">
+              <div className="mx-auto h-12 w-12 rounded-full bg-red-100 flex items-center justify-center mb-4">
+                <AlertTriangle className="h-6 w-6 text-red-600" />
+              </div>
+              <CardTitle className="text-xl">
+                {language === 'ar' ? 'تأكيد الحذف' : 'Confirm Deletion'}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-4">
+              <p className="text-center text-muted-foreground">
+                {t('media.confirmDelete')}
+              </p>
+              <div className="flex gap-3 mt-2">
+                <Button variant="outline" className="flex-1 rounded-full" onClick={() => setDeleteItem(null)} disabled={isDeleting}>
+                  {t('common.cancel')}
+                </Button>
+                <Button variant="destructive" className="flex-1 rounded-full" onClick={handleDelete} disabled={isDeleting}>
+                  {isDeleting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Trash2 className="h-4 w-4 mr-2" />}
+                  {t('common.delete')}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       )}
     </div>

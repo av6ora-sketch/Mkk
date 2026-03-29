@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/ca
 import { Button } from "../../components/ui/button";
 import { Loader2, FileText, Store, TrendingUp, Clock, ArrowRight, Plus, User } from "lucide-react";
 import { Link } from "react-router-dom";
+import { handleFirestoreError, OperationType } from "../../lib/firestore-error";
 
 export default function Overview() {
   const { t } = useLanguage();
@@ -21,11 +22,32 @@ export default function Overview() {
       
       setIsLoading(true);
       try {
-        const blogsSnap = await getDocs(query(collection(db, "blogs"), where("ownerUid", "==", auth.currentUser.uid)));
+        const blogsPath = "blogs";
+        let blogsSnap;
+        try {
+          blogsSnap = await getDocs(query(collection(db, blogsPath), where("ownerUid", "==", auth.currentUser.uid)));
+        } catch (e) {
+          handleFirestoreError(e, OperationType.GET, blogsPath);
+          return;
+        }
         setHasBlogs(blogsSnap.size > 0);
         
-        const articlesSnap = await getDocs(query(collection(db, "articles"), where("ownerUid", "==", auth.currentUser.uid)));
-        const scheduledSnap = await getDocs(query(collection(db, "articles"), where("ownerUid", "==", auth.currentUser.uid), where("status", "==", "scheduled")));
+        const articlesPath = "articles";
+        let articlesSnap;
+        try {
+          articlesSnap = await getDocs(query(collection(db, articlesPath), where("ownerUid", "==", auth.currentUser.uid)));
+        } catch (e) {
+          handleFirestoreError(e, OperationType.GET, articlesPath);
+          return;
+        }
+
+        let scheduledSnap;
+        try {
+          scheduledSnap = await getDocs(query(collection(db, articlesPath), where("ownerUid", "==", auth.currentUser.uid), where("status", "==", "scheduled")));
+        } catch (e) {
+          handleFirestoreError(e, OperationType.GET, articlesPath);
+          return;
+        }
         
         setStats({
           blogs: blogsSnap.size,
@@ -33,15 +55,29 @@ export default function Overview() {
           scheduled: scheduledSnap.size
         });
 
-        const recentSnap = await getDocs(query(
-          collection(db, "articles"), 
-          where("ownerUid", "==", auth.currentUser.uid),
-          orderBy("createdAt", "desc"),
-          limit(5)
-        ));
+        let recentSnap;
+        try {
+          recentSnap = await getDocs(query(
+            collection(db, articlesPath), 
+            where("ownerUid", "==", auth.currentUser.uid),
+            orderBy("createdAt", "desc"),
+            limit(5)
+          ));
+        } catch (e) {
+          handleFirestoreError(e, OperationType.GET, articlesPath);
+          return;
+        }
         setRecentArticles(recentSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
 
-        const userDoc = await getDocs(query(collection(db, "users"), where("__name__", "==", auth.currentUser.uid)));
+        const usersPath = "users";
+        let userDoc;
+        try {
+          userDoc = await getDocs(query(collection(db, usersPath), where("__name__", "==", auth.currentUser.uid)));
+        } catch (e) {
+          handleFirestoreError(e, OperationType.GET, usersPath);
+          return;
+        }
+        
         if (!userDoc.empty) {
           setAvatarUrl(userDoc.docs[0].data().avatarUrl || auth.currentUser.photoURL);
         } else {

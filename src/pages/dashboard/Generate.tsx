@@ -4,8 +4,9 @@ import { auth, db } from "../../firebase";
 import { collection, query, where, getDocs, addDoc } from "firebase/firestore";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
-import { Loader2, Wand2, Calendar, Save, CheckCircle2 } from "lucide-react";
+import { Loader2, Wand2, Calendar, Save, CheckCircle2, AlertCircle } from "lucide-react";
 import ReactMarkdown from "react-markdown";
+import { handleFirestoreError, OperationType } from "../../lib/firestore-error";
 
 interface Blog {
   id: string;
@@ -23,13 +24,21 @@ export default function Generate() {
   const [scheduleDate, setScheduleDate] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchBlogs = async () => {
       if (!auth.currentUser) return;
       try {
-        const q = query(collection(db, "blogs"), where("ownerUid", "==", auth.currentUser.uid));
-        const querySnapshot = await getDocs(q);
+        const path = "blogs";
+        const q = query(collection(db, path), where("ownerUid", "==", auth.currentUser.uid));
+        let querySnapshot;
+        try {
+          querySnapshot = await getDocs(q);
+        } catch (e) {
+          handleFirestoreError(e, OperationType.GET, path);
+          return;
+        }
         const blogsData = querySnapshot.docs.map(doc => doc.data() as Blog);
         setBlogs(blogsData);
         if (blogsData.length > 0) setSelectedBlog(blogsData[0].id);
@@ -45,6 +54,7 @@ export default function Generate() {
     setIsGenerating(true);
     setGeneratedArticle(null);
     setSuccess(false);
+    setError(null);
     try {
       const response = await fetch('/api/generate-article', {
         method: 'POST',
@@ -59,6 +69,7 @@ export default function Generate() {
       setGeneratedArticle(data);
     } catch (error) {
       console.error("Error generating article:", error);
+      setError(t('error.generateFailed') || "Failed to generate article. Please try again.");
     } finally {
       setIsGenerating(false);
     }
@@ -67,6 +78,7 @@ export default function Generate() {
   const handleSave = async (status: 'draft' | 'scheduled' | 'published') => {
     if (!generatedArticle || !auth.currentUser) return;
     setIsSaving(true);
+    setError(null);
     try {
       let publishedUrl = null;
 
@@ -91,25 +103,30 @@ export default function Generate() {
         publishedUrl = data.post?.url;
       }
 
-      await addDoc(collection(db, "articles"), {
-        title: generatedArticle.title,
-        content: generatedArticle.content,
-        keywords: keywords.split(",").map(k => k.trim()),
-        status,
-        scheduledAt: status === 'scheduled' ? scheduleDate : null,
-        publishedAt: status === 'published' ? new Date().toISOString() : null,
-        publishedUrl,
-        blogId: selectedBlog,
-        ownerUid: auth.currentUser.uid,
-        createdAt: new Date().toISOString()
-      });
+      const path = "articles";
+      try {
+        await addDoc(collection(db, path), {
+          title: generatedArticle.title,
+          content: generatedArticle.content,
+          keywords: keywords.split(",").map(k => k.trim()),
+          status,
+          scheduledAt: status === 'scheduled' ? scheduleDate : null,
+          publishedAt: status === 'published' ? new Date().toISOString() : null,
+          publishedUrl,
+          blogId: selectedBlog,
+          ownerUid: auth.currentUser.uid,
+          createdAt: new Date().toISOString()
+        });
+      } catch (e) {
+        handleFirestoreError(e, OperationType.CREATE, path);
+      }
       setSuccess(true);
       setGeneratedArticle(null);
       setPrompt("");
       setKeywords("");
     } catch (error) {
       console.error("Error saving article:", error);
-      alert(t('error.publishFailed') || "Failed to publish article. Please check your Blogger connection.");
+      setError(t('error.publishFailed') || "Failed to publish article. Please check your Blogger connection.");
     } finally {
       setIsSaving(false);
     }
@@ -121,6 +138,13 @@ export default function Generate() {
         <h2 className="text-3xl font-bold tracking-tight">{t('generate.title')}</h2>
         <p className="text-muted-foreground">{t('generate.description')}</p>
       </div>
+
+      {error && (
+        <div className="bg-destructive/10 border border-destructive/20 text-destructive p-4 rounded-lg flex items-center gap-3">
+          <AlertCircle className="h-5 w-5" />
+          <span>{error}</span>
+        </div>
+      )}
 
       <div className="grid gap-6 md:grid-cols-3">
         <Card className="md:col-span-1">

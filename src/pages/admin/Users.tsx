@@ -4,8 +4,9 @@ import { auth, db } from "../../firebase";
 import { collection, getDocs, query, orderBy, deleteDoc, doc, updateDoc } from "firebase/firestore";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
-import { Loader2, Trash2, Shield, User } from "lucide-react";
+import { Loader2, Trash2, Shield, User, AlertTriangle } from "lucide-react";
 import { format } from "date-fns";
+import { handleFirestoreError, OperationType } from "../../lib/firestore-error";
 
 interface UserProfile {
   id: string;
@@ -17,15 +18,24 @@ interface UserProfile {
 }
 
 export default function AdminUsers() {
-  const { language } = useLanguage();
+  const { language, t } = useLanguage();
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const fetchUsers = async () => {
     setIsLoading(true);
     try {
-      const q = query(collection(db, "users"), orderBy("createdAt", "desc"));
-      const querySnapshot = await getDocs(q);
+      const path = "users";
+      const q = query(collection(db, path), orderBy("createdAt", "desc"));
+      let querySnapshot;
+      try {
+        querySnapshot = await getDocs(q);
+      } catch (e) {
+        handleFirestoreError(e, OperationType.GET, path);
+        return;
+      }
       const usersData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as UserProfile));
       setUsers(usersData);
     } catch (error) {
@@ -39,19 +49,35 @@ export default function AdminUsers() {
     fetchUsers();
   }, []);
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm(language === 'ar' ? 'هل أنت متأكد أنك تريد حذف هذا المستخدم؟' : 'Are you sure you want to delete this user?')) return;
+  const handleDelete = async () => {
+    if (!deleteId) return;
+    setIsDeleting(true);
     try {
-      await deleteDoc(doc(db, "users", id));
+      const path = "users";
+      try {
+        await deleteDoc(doc(db, path, deleteId));
+      } catch (e) {
+        handleFirestoreError(e, OperationType.DELETE, `${path}/${deleteId}`);
+        return;
+      }
+      setDeleteId(null);
       await fetchUsers();
     } catch (error) {
       console.error("Error deleting user:", error);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
   const handleRoleChange = async (id: string, newRole: string) => {
     try {
-      await updateDoc(doc(db, "users", id), { role: newRole });
+      const path = "users";
+      try {
+        await updateDoc(doc(db, path, id), { role: newRole });
+      } catch (e) {
+        handleFirestoreError(e, OperationType.UPDATE, `${path}/${id}`);
+        return;
+      }
       await fetchUsers();
     } catch (error) {
       console.error("Error updating user role:", error);
@@ -110,7 +136,7 @@ export default function AdminUsers() {
                     {language === 'ar' ? 'إزالة الصلاحيات' : 'Remove Admin'}
                   </Button>
                 )}
-                <Button variant="ghost" size="icon" onClick={() => handleDelete(user.id)} className="text-red-500 hover:text-red-600 hover:bg-red-50">
+                <Button variant="ghost" size="icon" onClick={() => setDeleteId(user.id)} className="text-red-500 hover:text-red-600 hover:bg-red-50">
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
@@ -118,6 +144,37 @@ export default function AdminUsers() {
           </Card>
         ))}
       </div>
+
+      {deleteId && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <Card className="w-full max-w-md shadow-lg animate-in fade-in zoom-in duration-200">
+            <CardHeader className="text-center">
+              <div className="mx-auto h-12 w-12 rounded-full bg-red-100 flex items-center justify-center mb-4">
+                <AlertTriangle className="h-6 w-6 text-red-600" />
+              </div>
+              <CardTitle className="text-xl">
+                {language === 'ar' ? 'تأكيد الحذف' : 'Confirm Deletion'}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-4">
+              <p className="text-center text-muted-foreground">
+                {language === 'ar' 
+                  ? 'هل أنت متأكد أنك تريد حذف هذا المستخدم؟ لا يمكن التراجع عن هذا الإجراء.' 
+                  : 'Are you sure you want to delete this user? This action cannot be undone.'}
+              </p>
+              <div className="flex gap-3 mt-2">
+                <Button variant="outline" className="flex-1 rounded-full" onClick={() => setDeleteId(null)} disabled={isDeleting}>
+                  {t('common.cancel')}
+                </Button>
+                <Button variant="destructive" className="flex-1 rounded-full" onClick={handleDelete} disabled={isDeleting}>
+                  {isDeleting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Trash2 className="h-4 w-4 mr-2" />}
+                  {t('common.delete')}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }

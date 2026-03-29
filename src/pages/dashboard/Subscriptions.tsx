@@ -12,10 +12,10 @@ export default function Subscriptions() {
       period: t('subscriptions.month'),
       description: t('subscriptions.freeDesc'),
       features: [
-        "Up to 5 articles per month",
-        "1 connected Blogger account",
-        "Basic AI generation",
-        "Standard support"
+        t('subscriptions.freeFeature1'),
+        t('subscriptions.freeFeature2'),
+        t('subscriptions.freeFeature3'),
+        t('subscriptions.freeFeature4')
       ],
       buttonText: t('subscriptions.currentPlan'),
       buttonVariant: "outline" as const,
@@ -27,11 +27,11 @@ export default function Subscriptions() {
       period: t('subscriptions.month'),
       description: t('subscriptions.proDesc'),
       features: [
-        "Up to 50 articles per month",
-        "3 connected Blogger accounts",
-        "Advanced AI generation (GPT-4)",
-        "Priority support",
-        "Custom article scheduling"
+        t('subscriptions.proFeature1'),
+        t('subscriptions.proFeature2'),
+        t('subscriptions.proFeature3'),
+        t('subscriptions.proFeature4'),
+        t('subscriptions.proFeature5')
       ],
       buttonText: t('subscriptions.upgradePro'),
       buttonVariant: "default" as const,
@@ -43,12 +43,12 @@ export default function Subscriptions() {
       period: t('subscriptions.month'),
       description: t('subscriptions.agencyDesc'),
       features: [
-        "Unlimited articles",
-        "Unlimited Blogger accounts",
-        "Premium AI generation",
-        "24/7 Priority support",
-        "Custom branding",
-        "API access"
+        t('subscriptions.agencyFeature1'),
+        t('subscriptions.agencyFeature2'),
+        t('subscriptions.agencyFeature3'),
+        t('subscriptions.agencyFeature4'),
+        t('subscriptions.agencyFeature5'),
+        t('subscriptions.agencyFeature6')
       ],
       buttonText: t('subscriptions.upgradeAgency'),
       buttonVariant: "outline" as const,

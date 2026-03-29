@@ -28,6 +28,16 @@ const DashboardAccount = lazy(() => import("./pages/dashboard/MyAccount"));
 const DashboardSubscriptions = lazy(() => import("./pages/dashboard/Subscriptions"));
 const DashboardSupport = lazy(() => import("./pages/dashboard/Support"));
 
+// Lazy Loaded Admin Pages
+const AdminLayout = lazy(() => import("./components/layout/AdminLayout"));
+const AdminOverview = lazy(() => import("./pages/admin/Overview"));
+const AdminUsers = lazy(() => import("./pages/admin/Users"));
+const AdminStores = lazy(() => import("./pages/admin/Stores"));
+const AdminReports = lazy(() => import("./pages/admin/Reports"));
+const AdminSupport = lazy(() => import("./pages/admin/Support"));
+const AdminRoles = lazy(() => import("./pages/admin/Roles"));
+const AdminProfile = lazy(() => import("./pages/admin/Profile"));
+
 const LoadingFallback = () => (
   <div className="min-h-screen flex items-center justify-center bg-background">
     <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -60,6 +70,17 @@ export default function App() {
               <Route path="account" element={<DashboardAccount />} />
               <Route path="subscriptions" element={<DashboardSubscriptions />} />
               <Route path="support" element={<DashboardSupport />} />
+            </Route>
+
+            {/* Admin Routes */}
+            <Route path="/admin" element={<AdminLayout />}>
+              <Route index element={<AdminOverview />} />
+              <Route path="users" element={<AdminUsers />} />
+              <Route path="stores" element={<AdminStores />} />
+              <Route path="reports" element={<AdminReports />} />
+              <Route path="support" element={<AdminSupport />} />
+              <Route path="roles" element={<AdminRoles />} />
+              <Route path="profile" element={<AdminProfile />} />
             </Route>
 
             {/* Fallback */}

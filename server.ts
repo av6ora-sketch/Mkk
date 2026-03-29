@@ -18,14 +18,35 @@ const __dirname = path.dirname(__filename);
 const firebaseConfig = JSON.parse(fs.readFileSync(path.join(__dirname, "firebase-applet-config.json"), "utf8"));
 
 // Initialize Firebase Admin
-const adminApp = getApps().length === 0 
-  ? initializeApp({
-      projectId: firebaseConfig.projectId
-    }) 
-  : getApps()[0];
+let adminApp;
+try {
+  adminApp = getApps().length === 0 
+    ? initializeApp({
+        projectId: firebaseConfig.projectId
+      }) 
+    : getApps()[0];
+} catch (error) {
+  console.error("Failed to initialize Firebase Admin SDK:", error);
+  // Fallback or exit if critical
+}
 
 // Use named database if provided, otherwise fallback to default
 const db = getFirestore(adminApp, firebaseConfig.firestoreDatabaseId || "(default)");
+
+// Test connection to Firestore Admin on startup
+async function testAdminConnection() {
+  try {
+    console.log(`Testing Firestore Admin connection for project: ${firebaseConfig.projectId}, database: ${firebaseConfig.firestoreDatabaseId || "(default)"}`);
+    await db.listCollections();
+    console.log("Firestore Admin connection successful.");
+  } catch (error) {
+    console.error("Firestore Admin connection test failed on startup:", error);
+    if (error instanceof Error && error.message.includes("PERMISSION_DENIED")) {
+      console.error("CRITICAL: Permission denied for Firestore Admin. Please ensure the service account has 'Cloud Datastore User' or 'Firebase Firestore Admin' role.");
+    }
+  }
+}
+testAdminConnection();
 
 // Initialize Gemini
 const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
@@ -199,13 +220,6 @@ async function startServer() {
     const now = new Date().toISOString();
 
     try {
-      // Test connection
-      try {
-        await db.listCollections();
-      } catch (connErr) {
-        console.error("Firestore Admin connection test failed:", connErr);
-      }
-
       const articlesSnap = await db.collection("articles")
         .where("status", "==", "scheduled")
         .where("scheduledAt", "<=", now)

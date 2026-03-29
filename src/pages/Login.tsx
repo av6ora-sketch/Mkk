@@ -62,6 +62,8 @@ export default function Login() {
       } else if (err.code === 'auth/cancelled-popup-request' || err.code === 'auth/popup-closed-by-user') {
         // User closed the popup, don't show error
         console.log("Popup closed by user");
+      } else if (err.code === 'auth/invalid-credential' && err.message?.includes('invalid_client')) {
+        setError(language === 'ar' ? "خطأ في تكوين Google Auth: سر العميل (Client Secret) غير صالح في وحدة تحكم Firebase." : "Google Auth configuration error: The Client Secret is invalid in the Firebase Console.");
       } else {
         setError(language === 'ar' ? "حدث خطأ أثناء تسجيل الدخول بواسطة جوجل." : "An error occurred during Google login.");
       }

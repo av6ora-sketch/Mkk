@@ -7,6 +7,7 @@ import { Button } from "../../components/ui/button";
 import { Loader2, FileText, Store, TrendingUp, Clock, ArrowRight, Plus, User } from "lucide-react";
 import { Link } from "react-router-dom";
 import { handleFirestoreError, OperationType } from "../../lib/firestore-error";
+import ConfigStatus from "../../components/ConfigStatus";
 
 export default function Overview() {
   const { t } = useLanguage();
@@ -104,6 +105,7 @@ export default function Overview() {
 
   return (
     <div className="space-y-8 max-w-6xl mx-auto">
+      <ConfigStatus />
       {!hasBlogs && (
         <div className="bg-card border rounded-2xl p-8 text-center flex flex-col items-center justify-center shadow-sm">
           <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center mb-6 overflow-hidden border-4 border-background shadow-sm">

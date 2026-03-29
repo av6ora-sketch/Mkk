@@ -72,5 +72,9 @@ service cloud.firestore {
     match /test/connection {
       allow read: if true;
     }
+
+    match /health_check/{docId} {
+      allow read: if true;
+    }
   }
 }

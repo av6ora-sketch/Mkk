@@ -20,14 +20,16 @@ const firebaseConfig = JSON.parse(fs.readFileSync(path.join(__dirname, "firebase
 // Initialize Firebase Admin
 let adminApp;
 try {
-  adminApp = getApps().length === 0 
-    ? initializeApp({
-        projectId: firebaseConfig.projectId
-      }) 
-    : getApps()[0];
+  if (getApps().length === 0) {
+    adminApp = initializeApp({
+      projectId: firebaseConfig.projectId
+    });
+    console.log("Firebase Admin initialized with Project ID from config:", firebaseConfig.projectId);
+  } else {
+    adminApp = getApps()[0];
+  }
 } catch (error) {
-  console.error("Failed to initialize Firebase Admin SDK:", error);
-  // Fallback or exit if critical
+  console.error("Critical: Failed to initialize Firebase Admin SDK:", error);
 }
 
 // Use named database if provided, otherwise fallback to default
@@ -36,20 +38,38 @@ const db = getFirestore(adminApp, firebaseConfig.firestoreDatabaseId || "(defaul
 // Test connection to Firestore Admin on startup
 async function testAdminConnection() {
   try {
-    console.log(`Testing Firestore Admin connection for project: ${firebaseConfig.projectId}, database: ${firebaseConfig.firestoreDatabaseId || "(default)"}`);
-    await db.listCollections();
+    console.log(`Testing Firestore Admin connection...`);
+    console.log(`Project: ${firebaseConfig.projectId}`);
+    console.log(`Database: ${firebaseConfig.firestoreDatabaseId || "(default)"}`);
+    
+    // Using a simple get to test connectivity and permissions
+    await db.collection("health_check").limit(1).get();
     console.log("Firestore Admin connection successful.");
-  } catch (error) {
-    console.error("Firestore Admin connection test failed on startup:", error);
-    if (error instanceof Error && error.message.includes("PERMISSION_DENIED")) {
-      console.error("CRITICAL: Permission denied for Firestore Admin. Please ensure the service account has 'Cloud Datastore User' or 'Firebase Firestore Admin' role.");
+  } catch (error: any) {
+    console.error("--------------------------------------------------");
+    console.error("FIRESTORE ADMIN CONNECTION FAILED");
+    console.error(`Error Code: ${error.code}`);
+    console.error(`Message: ${error.message}`);
+    
+    if (error.code === 7 || error.message?.includes("PERMISSION_DENIED")) {
+      console.error("ACTION REQUIRED: Permission Denied.");
+      console.error("1. Go to https://console.cloud.google.com/iam-admin/iam");
+      console.error("2. Ensure the service account has 'Cloud Datastore User' role.");
+      console.error("3. If this is a remixed app, you may need to run 'set_up_firebase' again.");
     }
+    console.error("--------------------------------------------------");
   }
 }
 testAdminConnection();
 
 // Initialize Gemini
 const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
+
+// Validate environment variables for Blogger OAuth
+if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET || !process.env.APP_URL) {
+  console.error("CRITICAL: Missing required environment variables for Blogger integration.");
+  console.error("Please ensure GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, and APP_URL are set in AI Studio Settings.");
+}
 
 // Google OAuth Client for Blogger
 const oauth2Client = new google.auth.OAuth2(
@@ -63,6 +83,32 @@ async function startServer() {
   const PORT = 3000;
 
   app.use(express.json());
+
+  // --- Health Check ---
+  app.get("/api/health-check", async (req, res) => {
+    const status: any = {
+      env: {
+        GOOGLE_CLIENT_ID: !!process.env.GOOGLE_CLIENT_ID,
+        GOOGLE_CLIENT_SECRET: !!process.env.GOOGLE_CLIENT_SECRET,
+        APP_URL: !!process.env.APP_URL,
+        GEMINI_API_KEY: !!process.env.GEMINI_API_KEY,
+      },
+      firestoreAdmin: "unknown",
+      projectId: firebaseConfig.projectId,
+      databaseId: firebaseConfig.firestoreDatabaseId || "(default)"
+    };
+
+    try {
+      await db.collection("health_check").limit(1).get();
+      status.firestoreAdmin = "connected";
+    } catch (error: any) {
+      status.firestoreAdmin = "error";
+      status.firestoreError = error.message;
+      status.firestoreErrorCode = error.code;
+    }
+
+    res.json(status);
+  });
 
   // --- Auth Routes ---
 
@@ -112,9 +158,13 @@ async function startServer() {
           </body>
         </html>
       `);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error exchanging code for tokens:", error);
-      res.status(500).send("Authentication failed.");
+      if (error.message?.includes('invalid_client')) {
+        res.status(401).send("Authentication failed: Google Client Secret is invalid. Please check your environment variables.");
+      } else {
+        res.status(500).send("Authentication failed.");
+      }
     }
   });
 
@@ -245,8 +295,21 @@ async function startServer() {
           console.error(`Failed to publish article ${article.title}:`, error);
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error in scheduler background job:", error);
+      if (error.code === 9 || error.message?.includes("FAILED_PRECONDITION")) {
+        console.error("CRITICAL: Missing Firestore composite index for scheduled articles.");
+        console.error("Please create an index for collection 'articles' with fields: status (Ascending) and scheduledAt (Ascending).");
+        if (error.message?.includes("https://console.firebase.google.com")) {
+          console.error("Direct link to create index:", error.message.match(/https:\/\/console\.firebase\.google\.com[^\s]*/)?.[0]);
+        }
+      } else if (error.code === 7 || error.message?.includes("PERMISSION_DENIED")) {
+        console.error("CRITICAL: Permission denied for Firestore Admin in background job. Ensure the service account has 'Cloud Datastore User' or 'Firebase Firestore Admin' role.");
+      } else if (error.message?.includes('invalid_client')) {
+        console.error("CRITICAL: Google Client Secret is invalid. Please check your environment variables in AI Studio Settings.");
+      } else {
+        console.error("Unexpected error in scheduler:", error.stack || error);
+      }
     }
   }, 60 * 1000); // Check every minute
 

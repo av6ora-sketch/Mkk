@@ -97,10 +97,9 @@ export default function Settings() {
   const handleConnect = async () => {
     if (!auth.currentUser) return;
     try {
-      const response = await fetch('/api/auth/url');
+      const response = await fetch(`/api/auth/url?userId=${auth.currentUser.uid}`);
       const { url } = await response.json();
-      const authUrl = `${url}&state=${auth.currentUser.uid}`;
-      window.open(authUrl, 'blogger_auth', 'width=600,height=700');
+      window.open(url, 'blogger_auth', 'width=600,height=700');
     } catch (error) {
       console.error("Error starting OAuth:", error);
     }

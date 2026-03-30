@@ -126,16 +126,27 @@ async function startServer() {
   // --- Auth Routes ---
 
   app.get("/api/auth/url", (req, res) => {
+    const userId = req.query.userId as string;
     const scopes = [
       'https://www.googleapis.com/auth/blogger',
       'https://www.googleapis.com/auth/userinfo.profile',
       'https://www.googleapis.com/auth/userinfo.email'
     ];
 
-    // Determine the correct redirect URI based on the incoming request's origin
-    const host = req.headers['x-forwarded-host'] || req.get('host');
-    const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'https';
+    // Robust redirect URI construction
+    let protocol = req.headers['x-forwarded-proto'] || req.protocol || 'https';
+    if (typeof protocol === 'string' && protocol.includes(',')) protocol = protocol.split(',')[0].trim();
+    
+    let host = req.headers['x-forwarded-host'] || req.get('host');
+    if (typeof host === 'string' && host.includes(',')) host = host.split(',')[0].trim();
+    
+    // Force HTTPS for known production domains
+    if (host?.includes('run.app') || host?.includes('vercel.app') || host?.includes('firebaseapp.com')) {
+      protocol = 'https';
+    }
+
     const redirectUri = `${protocol}://${host}/auth/callback`;
+    console.log("Generated OAuth Redirect URI:", redirectUri);
 
     // Create a temporary OAuth client with the dynamic redirect URI
     const tempOauth2Client = new google.auth.OAuth2(
@@ -144,10 +155,14 @@ async function startServer() {
       redirectUri
     );
 
+    const stateObj = { userId, redirectUri };
+    const stateStr = Buffer.from(JSON.stringify(stateObj)).toString('base64');
+
     const url = tempOauth2Client.generateAuthUrl({
       access_type: 'offline',
       scope: scopes,
-      prompt: 'consent'
+      prompt: 'consent',
+      state: stateStr
     });
 
     res.json({ url, redirectUri });
@@ -155,12 +170,28 @@ async function startServer() {
 
   app.get("/auth/callback", async (req, res) => {
     const { code, state } = req.query;
-    const userId = state as string; // We'll pass userId in state from client
+    
+    let userId = "";
+    let redirectUri = "";
 
-    // Determine the correct redirect URI based on the incoming request's origin
-    const host = req.headers['x-forwarded-host'] || req.get('host');
-    const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'https';
-    const redirectUri = `${protocol}://${host}/auth/callback`;
+    try {
+      const stateObj = JSON.parse(Buffer.from(state as string, 'base64').toString('utf-8'));
+      userId = stateObj.userId;
+      redirectUri = stateObj.redirectUri;
+    } catch (e) {
+      console.error("Failed to parse state parameter", e);
+      // Fallback if state parsing fails
+      let protocol = req.headers['x-forwarded-proto'] || req.protocol || 'https';
+      if (typeof protocol === 'string' && protocol.includes(',')) protocol = protocol.split(',')[0].trim();
+      
+      let host = req.headers['x-forwarded-host'] || req.get('host');
+      if (typeof host === 'string' && host.includes(',')) host = host.split(',')[0].trim();
+      
+      if (host?.includes('run.app') || host?.includes('vercel.app')) protocol = 'https';
+      
+      redirectUri = `${protocol}://${host}/auth/callback`;
+      userId = state as string; // Fallback to old behavior
+    }
 
     // Create a temporary OAuth client with the dynamic redirect URI
     const tempOauth2Client = new google.auth.OAuth2(
@@ -197,11 +228,15 @@ async function startServer() {
       `);
     } catch (error: any) {
       console.error("Error exchanging code for tokens:", error);
-      if (error.message?.includes('invalid_client')) {
-        res.status(401).send("Authentication failed: Google Client Secret is invalid. Please check your environment variables.");
-      } else {
-        res.status(500).send("Authentication failed.");
-      }
+      res.send(`
+        <html>
+          <body>
+            <h2>Authentication Failed</h2>
+            <p>Error details: ${error.message}</p>
+            <p>Please close this window and try again.</p>
+          </body>
+        </html>
+      `);
     }
   });
 

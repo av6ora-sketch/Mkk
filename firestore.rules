@@ -14,9 +14,9 @@ service cloud.firestore {
     
     function isAdmin() {
       return isAuthenticated() &&
-        ((exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin') ||
-          (request.auth.token.email == "av6ora@gmail.com" && request.auth.token.email_verified == true));
+        (('email' in request.auth.token && request.auth.token.email == "av6ora@gmail.com" && request.auth.token.email_verified == true) ||
+         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'));
     }
 
     function isDocOwner() {
@@ -26,10 +26,16 @@ service cloud.firestore {
     // Validation Functions
     function isValidBlog(data) {
       return data.ownerUid == request.auth.uid &&
-             data.blogId is string &&
-             data.name is string &&
-             data.name.size() > 0 && data.name.size() < 100 &&
-             data.url is string && data.url.size() < 500;
+             data.id is string &&
+             data.title is string &&
+             data.title.size() > 0 && data.title.size() < 200 &&
+             data.url is string && data.url.size() < 500 &&
+             (!('topic' in data) || data.topic is string) &&
+             (!('language' in data) || data.language is string) &&
+             (!('prompts' in data) || data.prompts is string) &&
+             (!('autoPost' in data) || data.autoPost is bool) &&
+             (!('postFrequency' in data) || data.postFrequency is number) &&
+             (!('lastAutoPostAt' in data) || data.lastAutoPostAt is timestamp || data.lastAutoPostAt == null);
     }
 
     function isValidArticle(data) {

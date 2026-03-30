@@ -76,8 +76,15 @@ export default function Blogs() {
     setIsLoading(true);
     try {
       const response = await fetch(`/api/blogs?userId=${auth.currentUser.uid}`);
-      const remoteBlogs = await response.json();
+      const data = await response.json();
       
+      if (!response.ok) {
+        console.error("Failed to fetch blogs:", data.error || data);
+        alert(`Failed to fetch blogs: ${data.error || "Unknown error"}`);
+        return;
+      }
+      
+      const remoteBlogs = data;
       if (Array.isArray(remoteBlogs)) {
         // Save new blogs to Firestore
         const path = "blogs";

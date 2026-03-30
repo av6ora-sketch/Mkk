@@ -118,12 +118,46 @@ export default function Settings() {
 
   const handleConnect = async () => {
     if (!auth.currentUser) return;
+    
+    // Open the window synchronously before the fetch to avoid browser popup blockers
+    const authWindow = window.open('', 'blogger_auth', 'width=600,height=700');
+    
+    if (!authWindow) {
+      alert("يرجى السماح بالنوافذ المنبثقة (Pop-ups) لهذا الموقع لكي تتمكن من تسجيل الدخول.");
+      return;
+    }
+
+    authWindow.document.write('<div style="font-family: sans-serif; padding: 20px; text-align: center;">جاري التحميل... يرجى الانتظار<br>Loading... Please wait</div>');
+
     try {
-      const response = await fetch(`/api/auth/url?userId=${auth.currentUser.uid}`);
+      // Use VITE_API_URL if defined (for Vercel), otherwise use relative path
+      let baseUrl = import.meta.env.VITE_API_URL || '';
+      // Remove trailing slash if present
+      if (baseUrl.endsWith('/')) {
+        baseUrl = baseUrl.slice(0, -1);
+      }
+      
+      // If we are on Vercel and VITE_API_URL is empty, this will fail because it tries to fetch from Vercel's domain
+      // We should warn the user if VITE_API_URL is missing but we are not on localhost
+      if (!baseUrl && !window.location.hostname.includes('localhost') && !window.location.hostname.includes('run.app')) {
+        console.warn("VITE_API_URL is not set. API calls might fail if the backend is not hosted on the same domain.");
+      }
+
+      const fetchUrl = `${baseUrl}/api/auth/url?userId=${auth.currentUser.uid}`;
+      console.log("Fetching OAuth URL from:", fetchUrl);
+      
+      const response = await fetch(fetchUrl);
+      
+      if (!response.ok) {
+        throw new Error(`Server returned ${response.status}`);
+      }
+      
       const { url } = await response.json();
-      window.open(url, 'blogger_auth', 'width=600,height=700');
+      authWindow.location.href = url;
     } catch (error) {
       console.error("Error starting OAuth:", error);
+      authWindow.close();
+      alert(`حدث خطأ أثناء محاولة الاتصال بالخادم.\n\nإذا كنت تستخدم Vercel، يجب عليك إضافة المتغير VITE_API_URL في إعدادات Vercel وقيمته هي رابط الخادم الخلفي (Backend).\n\nتفاصيل الخطأ: ${error}`);
     }
   };
 
@@ -132,7 +166,10 @@ export default function Settings() {
     setIsSyncing(true);
     setApiError(null);
     try {
-      const response = await fetch(`/api/blogs?userId=${auth.currentUser.uid}`);
+      let baseUrl = import.meta.env.VITE_API_URL || '';
+      if (baseUrl.endsWith('/')) baseUrl = baseUrl.slice(0, -1);
+      
+      const response = await fetch(`${baseUrl}/api/blogs?userId=${auth.currentUser.uid}`);
       const data = await response.json();
       
       if (!response.ok) {

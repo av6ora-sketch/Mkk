@@ -8,6 +8,7 @@ import { getFirestore } from "firebase-admin/firestore";
 import fs from "fs";
 import { google } from "googleapis";
 import { GoogleGenAI } from "@google/genai";
+import cors from "cors";
 
 dotenv.config();
 
@@ -94,6 +95,7 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
+  app.use(cors());
   app.use(express.json());
 
   // --- Health Check ---

@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { motion } from "motion/react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Activity, Eye, EyeOff, Loader2, X } from "lucide-react";
@@ -137,10 +136,7 @@ export default function Login() {
         <Link to="/" className={`absolute top-8 ${language === 'ar' ? 'left-8' : 'right-8'} text-muted-foreground hover:text-foreground transition-colors`}>
           <X className="h-6 w-6" />
         </Link>
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
+        <div 
           className="w-full max-w-md space-y-8"
         >
           <div className={`text-center ${language === 'ar' ? 'lg:text-right' : 'lg:text-left'}`}>
@@ -239,7 +235,7 @@ export default function Login() {
               {language === 'ar' ? 'إنشاء حساب جديد' : 'Create a new account'}
             </Link>
           </div>
-        </motion.div>
+        </div>
       </div>
     </div>
   );

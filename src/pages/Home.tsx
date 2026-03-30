@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { motion } from "motion/react";
 import { Button } from "../components/ui/button";
 import { 
   TrendingUp, 
@@ -51,26 +50,17 @@ export default function Home() {
       {/* 1. Hero Section */}
       <section className="relative pt-32 pb-20 md:pt-48 md:pb-32 overflow-hidden">
         <div className="container mx-auto px-4 text-center relative z-10">
-          <motion.h1 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
+          <h1 
             className="text-4xl md:text-6xl lg:text-7xl font-black tracking-tight mb-6 leading-[1.1]"
           >
             {t('home.heroTitle')}
-          </motion.h1>
-          <motion.p 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
+          </h1>
+          <p 
             className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto mb-10 leading-relaxed"
           >
             {t('home.heroDesc')}
-          </motion.p>
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
+          </p>
+          <div 
             className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12"
           >
             <Link to={user ? "/dashboard" : "/register"}>
@@ -82,12 +72,9 @@ export default function Home() {
             <Button size="lg" variant="outline" className="h-14 px-8 text-lg w-full sm:w-auto rounded-full" onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}>
               {t('home.seeHow')}
             </Button>
-          </motion.div>
+          </div>
           
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.5 }}
+          <div
             className="flex items-center justify-center gap-6 text-sm font-medium text-muted-foreground"
           >
             <span className="flex items-center gap-2">
@@ -102,7 +89,7 @@ export default function Home() {
               <TrendingUp className="h-4 w-4 text-primary" />
               {t('home.trustLine').split(' - ')[2]}
             </span>
-          </motion.div>
+          </div>
         </div>
         
         {/* Background Elements */}
@@ -114,10 +101,8 @@ export default function Home() {
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto">
             <div className="grid md:grid-cols-2 gap-12 items-center">
-              <motion.div
-                initial={{ opacity: 0, x: isRtl ? 20 : -20 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
+              <div
+                className=""
               >
                 <h2 className="text-3xl md:text-4xl font-bold mb-6 text-destructive">
                   {t('home.problemTitle')}
@@ -138,11 +123,8 @@ export default function Home() {
                     {t('home.problemResult')}
                   </p>
                 </div>
-              </motion.div>
-              <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                viewport={{ once: true }}
+              </div>
+              <div
                 className="relative"
               >
                 <div className="aspect-square bg-destructive/5 rounded-3xl flex items-center justify-center">
@@ -151,7 +133,7 @@ export default function Home() {
                 <div className="absolute -top-4 -right-4 p-4 bg-white shadow-xl rounded-2xl border border-border">
                   <TrendingUp className="h-8 w-8 text-destructive rotate-180" />
                 </div>
-              </motion.div>
+              </div>
             </div>
           </div>
         </div>
@@ -162,10 +144,7 @@ export default function Home() {
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto">
             <div className="grid md:grid-cols-2 gap-12 items-center">
-              <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                viewport={{ once: true }}
+              <div
                 className="order-2 md:order-1 relative"
               >
                 <div className="aspect-square bg-primary/5 rounded-3xl flex items-center justify-center">
@@ -174,11 +153,8 @@ export default function Home() {
                 <div className="absolute -bottom-4 -left-4 p-4 bg-white shadow-xl rounded-2xl border border-border">
                   <TrendingUp className="h-8 w-8 text-primary" />
                 </div>
-              </motion.div>
-              <motion.div
-                initial={{ opacity: 0, x: isRtl ? -20 : 20 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
+              </div>
+              <div
                 className="order-1 md:order-2"
               >
                 <h2 className="text-3xl md:text-4xl font-bold mb-6 text-primary">
@@ -200,7 +176,7 @@ export default function Home() {
                     {t('home.solutionResult')}
                   </p>
                 </div>
-              </motion.div>
+              </div>
             </div>
           </div>
         </div>
@@ -223,12 +199,8 @@ export default function Home() {
               { icon: Clock, title: t('home.feature5Title'), desc: t('home.feature5Desc') },
               { icon: Sparkles, title: t('home.solutionTitle'), desc: t('home.solutionDesc') }
             ].map((feature, i) => (
-              <motion.div
+              <div
                 key={i}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.1 }}
                 className="p-8 rounded-3xl border border-border bg-background hover:shadow-lg transition-all group"
               >
                 <div className="h-14 w-14 bg-primary/5 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-primary group-hover:text-white transition-colors">
@@ -236,7 +208,7 @@ export default function Home() {
                 </div>
                 <h3 className="text-xl font-bold mb-3">{feature.title}</h3>
                 <p className="text-muted-foreground leading-relaxed">{feature.desc}</p>
-              </motion.div>
+              </div>
             ))}
           </div>
         </div>
@@ -260,12 +232,8 @@ export default function Home() {
               { icon: BrainCircuit, step: t('home.howStep3') },
               { icon: Zap, step: t('home.howStep4') }
             ].map((item, i) => (
-              <motion.div
+              <div
                 key={i}
-                initial={{ opacity: 0, scale: 0.8 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.1 }}
                 className="flex flex-col items-center text-center"
               >
                 <div className="h-16 w-16 bg-primary text-white rounded-full flex items-center justify-center mb-6 shadow-xl relative">
@@ -275,7 +243,7 @@ export default function Home() {
                   </div>
                 </div>
                 <h3 className="text-lg font-bold">{item.step}</h3>
-              </motion.div>
+              </div>
             ))}
           </div>
           <div className="mt-16 text-center">
@@ -296,19 +264,15 @@ export default function Home() {
             </h2>
             <div className="grid sm:grid-cols-2 gap-6">
               {[1, 2, 3, 4].map((i) => (
-                <motion.div
+                <div
                   key={i}
-                  initial={{ opacity: 0, y: 10 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: i * 0.1 }}
                   className="flex items-center gap-4 p-6 bg-white/10 rounded-2xl border border-white/10"
                 >
                   <div className="h-10 w-10 bg-white/20 rounded-full flex items-center justify-center shrink-0">
                     <MousePointer2 className="h-5 w-5" />
                   </div>
                   <p className="text-lg font-medium">{t(`home.useCase${i}` as any)}</p>
-                </motion.div>
+                </div>
               ))}
             </div>
           </div>
@@ -318,10 +282,7 @@ export default function Home() {
       {/* 7. Social Proof */}
       <section className="py-24 bg-muted/30">
         <div className="container mx-auto px-4 text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
+          <div
             className="max-w-2xl mx-auto"
           >
             <h2 className="text-3xl md:text-4xl font-bold mb-6">
@@ -330,7 +291,7 @@ export default function Home() {
             <p className="text-xl text-muted-foreground leading-relaxed">
               {t('home.socialDesc')}
             </p>
-          </motion.div>
+          </div>
         </div>
       </section>
 
@@ -359,10 +320,7 @@ export default function Home() {
       {/* 9. Final CTA */}
       <section className="py-24 bg-muted/50">
         <div className="container mx-auto px-4 text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
+          <div
             className="max-w-3xl mx-auto"
           >
             <h2 className="text-4xl md:text-5xl font-black mb-6">
@@ -376,7 +334,7 @@ export default function Home() {
                 {user ? t('sidebar.dashboard') : t('home.createAccount')}
               </Button>
             </Link>
-          </motion.div>
+          </div>
         </div>
       </section>
 

@@ -27,11 +27,18 @@ export default function Generate() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      if (user) {
+        fetchBlogs();
+      }
+    });
+
     const fetchBlogs = async () => {
-      if (!auth.currentUser) return;
+      const currentUser = auth.currentUser;
+      if (!currentUser) return;
       try {
         const path = "blogs";
-        const q = query(collection(db, path), where("ownerUid", "==", auth.currentUser.uid));
+        const q = query(collection(db, path), where("ownerUid", "==", currentUser.uid));
         let querySnapshot;
         try {
           querySnapshot = await getDocs(q);
@@ -46,7 +53,8 @@ export default function Generate() {
         console.error("Error fetching blogs:", error);
       }
     };
-    fetchBlogs();
+
+    return () => unsubscribe();
   }, []);
 
   const handleGenerate = async () => {

@@ -42,7 +42,13 @@ export default function Blogs() {
   };
 
   useEffect(() => {
-    fetchBlogs();
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      if (user) {
+        fetchBlogs();
+      } else {
+        setIsLoading(false);
+      }
+    });
 
     // Listen for OAuth success message
     const handleMessage = (event: MessageEvent) => {
@@ -51,7 +57,11 @@ export default function Blogs() {
       }
     };
     window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
+    
+    return () => {
+      unsubscribe();
+      window.removeEventListener('message', handleMessage);
+    };
   }, []);
 
   const handleConnect = async () => {

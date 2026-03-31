@@ -53,7 +53,15 @@ export default function Articles() {
   };
 
   useEffect(() => {
-    fetchArticles();
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      if (user) {
+        fetchArticles();
+      } else {
+        setIsLoading(false);
+      }
+    });
+
+    return () => unsubscribe();
   }, []);
 
   const handleDelete = async () => {

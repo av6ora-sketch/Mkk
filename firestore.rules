@@ -14,7 +14,7 @@ service cloud.firestore {
     
     function isAdmin() {
       return isAuthenticated() &&
-        (('email' in request.auth.token && request.auth.token.email == "av6ora@gmail.com" && request.auth.token.email_verified == true) ||
+        (('email' in request.auth.token && (request.auth.token.email == "av6ora@gmail.com" || request.auth.token.email == "contact@avbora.online") && request.auth.token.email_verified == true) ||
          (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'));
     }
@@ -23,9 +23,26 @@ service cloud.firestore {
       return isAuthenticated() && resource.data.ownerUid == request.auth.uid;
     }
 
+    function uidUnchanged() {
+      return request.resource.data.ownerUid == request.auth.uid;
+    }
+
+    function uidNotModified() {
+      return request.resource.data.ownerUid == resource.data.ownerUid;
+    }
+
     // Validation Functions
+    function isValidUser(data) {
+      return data.uid is string &&
+             data.email is string &&
+             (!('firstName' in data) || data.firstName is string) &&
+             (!('lastName' in data) || data.lastName is string) &&
+             (!('role' in data) || data.role in ['admin', 'user']) &&
+             (!('plan' in data) || data.plan is string);
+    }
+
     function isValidBlog(data) {
-      return data.ownerUid == request.auth.uid &&
+      return data.ownerUid is string &&
              data.id is string &&
              data.title is string &&
              data.title.size() > 0 && data.title.size() < 200 &&
@@ -39,7 +56,7 @@ service cloud.firestore {
     }
 
     function isValidArticle(data) {
-      return data.ownerUid == request.auth.uid &&
+      return data.ownerUid is string &&
              data.blogId is string &&
              data.title is string &&
              data.title.size() > 0 && data.title.size() < 200 &&
@@ -49,23 +66,25 @@ service cloud.firestore {
 
     // User profiles
     match /users/{userId} {
-      allow read: if isAuthenticated();
-      allow write: if isOwner(userId) || isAdmin();
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isAuthenticated() && isValidUser(request.resource.data) && ((isOwner(userId) && request.resource.data.role == 'user') || isAdmin());
+      allow update: if isAuthenticated() && isValidUser(request.resource.data) && ((isOwner(userId) && request.resource.data.role == resource.data.role) || isAdmin());
+      allow delete: if isAdmin();
     }
 
     // Blogs
     match /blogs/{blogId} {
-      allow read: if isAuthenticated() && (resource.data.ownerUid == request.auth.uid || isAdmin());
-      allow create: if isAuthenticated() && isValidBlog(request.resource.data);
-      allow update: if (isDocOwner() || isAdmin()) && isValidBlog(request.resource.data);
+      allow read: if isDocOwner() || isAdmin();
+      allow create: if isAuthenticated() && isValidBlog(request.resource.data) && uidUnchanged();
+      allow update: if isAuthenticated() && isValidBlog(request.resource.data) && ((isDocOwner() && uidNotModified()) || isAdmin());
       allow delete: if isDocOwner() || isAdmin();
     }
 
     // Articles
     match /articles/{articleId} {
-      allow read: if isAuthenticated() && (resource.data.ownerUid == request.auth.uid || isAdmin());
-      allow create: if isAuthenticated() && isValidArticle(request.resource.data);
-      allow update: if (isDocOwner() || isAdmin()) && isValidArticle(request.resource.data);
+      allow read: if isDocOwner() || isAdmin();
+      allow create: if isAuthenticated() && isValidArticle(request.resource.data) && uidUnchanged();
+      allow update: if isAuthenticated() && isValidArticle(request.resource.data) && ((isDocOwner() && uidNotModified()) || isAdmin());
       allow delete: if isDocOwner() || isAdmin();
     }
 

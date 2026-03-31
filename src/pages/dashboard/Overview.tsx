@@ -18,15 +18,24 @@ export default function Overview() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      if (user) {
+        fetchData();
+      } else {
+        setIsLoading(false);
+      }
+    });
+
     const fetchData = async () => {
-      if (!auth.currentUser) return;
+      const currentUser = auth.currentUser;
+      if (!currentUser) return;
       
       setIsLoading(true);
       try {
         const blogsPath = "blogs";
         let blogsSnap;
         try {
-          blogsSnap = await getDocs(query(collection(db, blogsPath), where("ownerUid", "==", auth.currentUser.uid)));
+          blogsSnap = await getDocs(query(collection(db, blogsPath), where("ownerUid", "==", currentUser.uid)));
         } catch (e) {
           handleFirestoreError(e, OperationType.GET, blogsPath);
           return;
@@ -36,7 +45,7 @@ export default function Overview() {
         const articlesPath = "articles";
         let articlesSnap;
         try {
-          articlesSnap = await getDocs(query(collection(db, articlesPath), where("ownerUid", "==", auth.currentUser.uid)));
+          articlesSnap = await getDocs(query(collection(db, articlesPath), where("ownerUid", "==", currentUser.uid)));
         } catch (e) {
           handleFirestoreError(e, OperationType.GET, articlesPath);
           return;
@@ -44,7 +53,7 @@ export default function Overview() {
 
         let scheduledSnap;
         try {
-          scheduledSnap = await getDocs(query(collection(db, articlesPath), where("ownerUid", "==", auth.currentUser.uid), where("status", "==", "scheduled")));
+          scheduledSnap = await getDocs(query(collection(db, articlesPath), where("ownerUid", "==", currentUser.uid), where("status", "==", "scheduled")));
         } catch (e) {
           handleFirestoreError(e, OperationType.GET, articlesPath);
           return;
@@ -60,7 +69,7 @@ export default function Overview() {
         try {
           recentSnap = await getDocs(query(
             collection(db, articlesPath), 
-            where("ownerUid", "==", auth.currentUser.uid),
+            where("ownerUid", "==", currentUser.uid),
             orderBy("createdAt", "desc"),
             limit(5)
           ));
@@ -73,16 +82,16 @@ export default function Overview() {
         const usersPath = "users";
         let userDoc;
         try {
-          userDoc = await getDocs(query(collection(db, usersPath), where("__name__", "==", auth.currentUser.uid)));
+          userDoc = await getDocs(query(collection(db, usersPath), where("__name__", "==", currentUser.uid)));
         } catch (e) {
           handleFirestoreError(e, OperationType.GET, usersPath);
           return;
         }
         
         if (!userDoc.empty) {
-          setAvatarUrl(userDoc.docs[0].data().avatarUrl || auth.currentUser.photoURL);
+          setAvatarUrl(userDoc.docs[0].data().avatarUrl || currentUser.photoURL);
         } else {
-          setAvatarUrl(auth.currentUser.photoURL);
+          setAvatarUrl(currentUser.photoURL);
         }
       } catch (error) {
         console.error("Error fetching overview data:", error);
@@ -90,7 +99,8 @@ export default function Overview() {
         setIsLoading(false);
       }
     };
-    fetchData();
+
+    return () => unsubscribe();
   }, []);
 
   if (isLoading) {

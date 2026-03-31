@@ -27,6 +27,7 @@ export default function Settings() {
   const [blogs, setBlogs] = useState<Blog[]>([]);
   const [showDisconnectConfirm, setShowDisconnectConfirm] = useState(false);
   const [apiError, setApiError] = useState<{message: string, url?: string} | null>(null);
+  const [connectError, setConnectError] = useState<string | null>(null);
 
   // New states for blog selection and configuration
   const [availableBlogs, setAvailableBlogs] = useState<Blog[]>([]);
@@ -118,12 +119,13 @@ export default function Settings() {
 
   const handleConnect = async () => {
     if (!auth.currentUser) return;
+    setConnectError(null);
     
     // Open the window synchronously before the fetch to avoid browser popup blockers
     const authWindow = window.open('', 'blogger_auth', 'width=600,height=700');
     
     if (!authWindow) {
-      alert("يرجى السماح بالنوافذ المنبثقة (Pop-ups) لهذا الموقع لكي تتمكن من تسجيل الدخول.");
+      setConnectError("يرجى السماح بالنوافذ المنبثقة (Pop-ups) لهذا الموقع لكي تتمكن من تسجيل الدخول.");
       return;
     }
 
@@ -152,12 +154,18 @@ export default function Settings() {
         throw new Error(`Server returned ${response.status}`);
       }
       
+      // Check if the response is JSON (Vercel might return HTML if the route is missing)
+      const contentType = response.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        throw new Error("تلقى التطبيق استجابة غير متوقعة (ليست JSON). هذا يعني أن الخادم الخلفي (Backend) غير متوفر على هذا الرابط. إذا كنت تستخدم Vercel، يجب عليك إعداد VITE_API_URL.");
+      }
+
       const { url } = await response.json();
       authWindow.location.href = url;
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error starting OAuth:", error);
       authWindow.close();
-      alert(`حدث خطأ أثناء محاولة الاتصال بالخادم.\n\nإذا كنت تستخدم Vercel، يجب عليك إضافة المتغير VITE_API_URL في إعدادات Vercel وقيمته هي رابط الخادم الخلفي (Backend).\n\nتفاصيل الخطأ: ${error}`);
+      setConnectError(`حدث خطأ أثناء محاولة الاتصال بالخادم.\n\nإذا كنت تستخدم Vercel، يجب عليك إضافة المتغير VITE_API_URL في إعدادات Vercel وقيمته هي رابط الخادم الخلفي (Backend).\n\nتفاصيل الخطأ: ${error.message || error}`);
     }
   };
 
@@ -272,6 +280,15 @@ export default function Settings() {
           <CardDescription>{t('blogSettings.bloggerConnectionDesc')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
+          {connectError && (
+            <div className="p-4 border border-red-200 bg-red-50 text-red-900 rounded-lg flex flex-col gap-2">
+              <div className="flex items-center gap-2 font-semibold">
+                <AlertTriangle className="h-5 w-5 text-red-600" />
+                <span>خطأ في الاتصال (Connection Error)</span>
+              </div>
+              <p className="text-sm whitespace-pre-line">{connectError}</p>
+            </div>
+          )}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg bg-muted/50 gap-4">
             <div className="flex items-center gap-3">
               {isConnected ? (

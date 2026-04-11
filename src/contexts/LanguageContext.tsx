@@ -11,7 +11,7 @@ interface LanguageContextType {
 const translations: Record<Language, Record<string, string>> = {
   en: {
     // General
-    'app.name': 'Avbora',
+    'app.name': 'AI Vision Beyond',
     'app.description': 'Generate and Schedule AI Articles',
     'nav.about': 'About Us',
     'nav.howItWorks': 'How it Works',
@@ -33,7 +33,7 @@ const translations: Record<Language, Record<string, string>> = {
     
     // Home Page
     'home.heroTitle': 'Turn your Blogger blog into a traffic machine... automatically',
-    'home.heroDesc': 'Stop wasting your time writing articles manually. Avbora creates SEO-friendly content for you and publishes it automatically on your blog — no spam, no effort.',
+    'home.heroDesc': 'Stop wasting your time writing articles manually. AI Vision Beyond creates SEO-friendly content for you and publishes it automatically on your blog — no spam, no effort.',
     'home.startFree': 'Start Now for Free',
     'home.seeHow': 'See how it works',
     'home.trustLine': 'No Spam - Original Content - Real Results',
@@ -45,8 +45,8 @@ const translations: Record<Language, Record<string, string>> = {
     'home.problemItem3': 'Not understanding SEO',
     'home.problemResult': 'The result? No traffic... no results.',
     
-    'home.solutionTitle': 'Here comes Avbora',
-    'home.solutionDesc': 'Avbora turns your blog into a smart system that works for you:',
+    'home.solutionTitle': 'Here comes AI Vision Beyond',
+    'home.solutionDesc': 'AI Vision Beyond turns your blog into a smart system that works for you:',
     'home.solutionItem1': 'Writes articles',
     'home.solutionItem2': 'Optimizes them for search engines',
     'home.solutionItem3': 'Publishes them automatically',
@@ -71,17 +71,17 @@ const translations: Record<Language, Record<string, string>> = {
     'home.howStep4': 'Auto-publishing',
     'home.howTime': 'The whole process takes no more than minutes',
     
-    'home.useCasesTitle': 'Avbora is not for everyone... but it is perfect for you if you:',
+    'home.useCasesTitle': 'AI Vision Beyond is not for everyone... but it is perfect for you if you:',
     'home.useCase1': 'Want to increase your blog traffic quickly',
     'home.useCase2': 'Don\'t have time to write content',
     'home.useCase3': 'Want income from Blogger',
     'home.useCase4': 'Work in SEO or marketing',
     
     'home.socialTitle': 'Start before everyone else',
-    'home.socialDesc': 'Be among the first users to benefit from Avbora before advanced features are launched.',
+    'home.socialDesc': 'Be among the first users to benefit from AI Vision Beyond before advanced features are launched.',
     
     'home.pricingTitle': 'Invest in your growth',
-    'home.pricingDesc': 'Instead of paying editors or wasting your time... Avbora offers you everything in a simple subscription.',
+    'home.pricingDesc': 'Instead of paying editors or wasting your time... AI Vision Beyond offers you everything in a simple subscription.',
     'home.viewPlans': 'View Plans',
     
     'home.finalTitle': 'Start today... or let competitors overtake you',
@@ -263,7 +263,7 @@ const translations: Record<Language, Record<string, string>> = {
   },
   ar: {
     // General
-    'app.name': 'Avbora',
+    'app.name': 'AI Vision Beyond',
     'app.description': 'إنشاء وجدولة المقالات بالذكاء الاصطناعي',
     'nav.about': 'من نحن',
     'nav.howItWorks': 'كيف يعمل',
@@ -285,7 +285,7 @@ const translations: Record<Language, Record<string, string>> = {
     
     // Home Page
     'home.heroTitle': 'حوّل مدونة Blogger إلى آلة زيارات… تعمل تلقائيًا',
-    'home.heroDesc': 'توقف عن إضاعة وقتك في كتابة المقالات يدويًا. Avbora ينشئ لك محتوى متوافق مع SEO، وينشره تلقائيًا على مدونتك — بدون سبام، وبدون مجهود.',
+    'home.heroDesc': 'توقف عن إضاعة وقتك في كتابة المقالات يدويًا. AI Vision Beyond ينشئ لك محتوى متوافق مع SEO، وينشره تلقائيًا على مدونتك — بدون سبام، وبدون مجهود.',
     'home.startFree': 'ابدأ الآن مجانًا',
     'home.seeHow': 'شاهد كيف يعمل',
     'home.trustLine': 'لا سبام - محتوى أصلي - نتائج حقيقية',
@@ -297,8 +297,8 @@ const translations: Record<Language, Record<string, string>> = {
     'home.problemItem3': 'عدم فهم SEO',
     'home.problemResult': 'والنتيجة؟ لا زيارات… ولا نتائج.',
     
-    'home.solutionTitle': 'هنا يأتي دور Avbora',
-    'home.solutionDesc': 'Avbora يحوّل مدونتك إلى نظام ذكي يعمل عنك:',
+    'home.solutionTitle': 'هنا يأتي دور AI Vision Beyond',
+    'home.solutionDesc': 'AI Vision Beyond يحوّل مدونتك إلى نظام ذكي يعمل عنك:',
     'home.solutionItem1': 'يكتب المقالات',
     'home.solutionItem2': 'يحسّنها لمحركات البحث',
     'home.solutionItem3': 'ينشرها تلقائيًا',
@@ -323,17 +323,17 @@ const translations: Record<Language, Record<string, string>> = {
     'home.howStep4': 'نشر تلقائي',
     'home.howTime': 'العملية كلها لا تستغرق أكثر من دقائق',
     
-    'home.useCasesTitle': 'Avbora ليس للجميع… لكنه مثالي لك إذا كنت:',
+    'home.useCasesTitle': 'AI Vision Beyond ليس للجميع… لكنه مثالي لك إذا كنت:',
     'home.useCase1': 'تريد زيادة زيارات مدونتك بسرعة',
     'home.useCase2': 'لا تملك وقت لكتابة المحتوى',
     'home.useCase3': 'تريد دخل من Blogger',
     'home.useCase4': 'تعمل في SEO أو التسويق',
     
     'home.socialTitle': 'ابدأ قبل الجميع',
-    'home.socialDesc': 'كن من أوائل المستخدمين الذين يستفيدون من Avbora قبل إطلاق الميزات المتقدمة.',
+    'home.socialDesc': 'كن من أوائل المستخدمين الذين يستفيدون من AI Vision Beyond قبل إطلاق الميزات المتقدمة.',
     
     'home.pricingTitle': 'استثمر في نموك',
-    'home.pricingDesc': 'بدل أن تدفع لمحررين أو تضيع وقتك… Avbora يقدم لك كل شيء في اشتراك بسيط.',
+    'home.pricingDesc': 'بدل أن تدفع لمحررين أو تضيع وقتك… AI Vision Beyond يقدم لك كل شيء في اشتراك بسيط.',
     'home.viewPlans': 'عرض الخطط',
     
     'home.finalTitle': 'ابدأ اليوم… أو اترك المنافسين يسبقونك',

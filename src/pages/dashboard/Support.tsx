@@ -29,7 +29,7 @@ export default function Support() {
     setMessage(null);
     try {
       await addDoc(collection(db, "support_tickets"), {
-        userId: auth.currentUser.uid,
+        ownerUid: auth.currentUser.uid,
         email: auth.currentUser.email,
         subject: formData.subject,
         message: formData.message,

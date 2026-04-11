@@ -46,7 +46,14 @@ export default function AdminUsers() {
   };
 
   useEffect(() => {
-    fetchUsers();
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      if (user) {
+        fetchUsers();
+      } else {
+        setIsLoading(false);
+      }
+    });
+    return () => unsubscribe();
   }, []);
 
   const handleDelete = async () => {

@@ -16,6 +16,14 @@ export default function AdminOverview() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      if (user) {
+        fetchStats();
+      } else {
+        setIsLoading(false);
+      }
+    });
+
     const fetchStats = async () => {
       try {
         const usersSnap = await getDocs(collection(db, "users"));
@@ -36,7 +44,7 @@ export default function AdminOverview() {
       }
     };
 
-    fetchStats();
+    return () => unsubscribe();
   }, []);
 
   if (isLoading) {

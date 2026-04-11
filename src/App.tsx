@@ -16,6 +16,9 @@ import DashboardLayout from "./components/layout/DashboardLayout";
 const Home = lazy(() => import("./pages/Home"));
 const Login = lazy(() => import("./pages/Login"));
 const Register = lazy(() => import("./pages/Register"));
+const About = lazy(() => import("./pages/About"));
+const Privacy = lazy(() => import("./pages/Privacy"));
+const Terms = lazy(() => import("./pages/Terms"));
 
 // Lazy Loaded Dashboard Pages
 const DashboardOverview = lazy(() => import("./pages/dashboard/Overview"));
@@ -53,6 +56,9 @@ export default function App() {
             {/* Public Routes */}
             <Route path="/" element={<MainLayout />}>
               <Route index element={<Home />} />
+              <Route path="about" element={<About />} />
+              <Route path="privacy" element={<Privacy />} />
+              <Route path="terms" element={<Terms />} />
             </Route>
             
             {/* Auth Routes */}

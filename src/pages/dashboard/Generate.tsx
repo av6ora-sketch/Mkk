@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/ca
 import { Loader2, Wand2, Calendar, Save, CheckCircle2, AlertCircle } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { handleFirestoreError, OperationType } from "../../lib/firestore-error";
+import { getApiUrl } from "../../lib/utils";
 
 interface Blog {
   id: string;
@@ -64,7 +65,7 @@ export default function Generate() {
     setSuccess(false);
     setError(null);
     try {
-      const response = await fetch('/api/generate-article', {
+      const response = await fetch(getApiUrl('/api/generate-article'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -92,7 +93,7 @@ export default function Generate() {
 
       if (status === 'published') {
         // Publish immediately via API
-        const response = await fetch('/api/publish-now', {
+        const response = await fetch(getApiUrl('/api/publish-now'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

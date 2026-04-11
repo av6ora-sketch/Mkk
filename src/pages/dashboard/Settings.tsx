@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../..
 import { Button } from "../../components/ui/button";
 import { Loader2, ShieldCheck, ShieldAlert, LogOut, RefreshCw, Store, ExternalLink, AlertTriangle, Settings as SettingsIcon, Plus } from "lucide-react";
 import { handleFirestoreError, OperationType } from "../../lib/firestore-error";
+import { getApiUrl } from "../../lib/utils";
 
 interface Blog {
   id: string;
@@ -132,20 +133,7 @@ export default function Settings() {
     authWindow.document.write('<div style="font-family: sans-serif; padding: 20px; text-align: center;">جاري التحميل... يرجى الانتظار<br>Loading... Please wait</div>');
 
     try {
-      // Use VITE_API_URL if defined (for Vercel), otherwise use relative path
-      let baseUrl = import.meta.env.VITE_API_URL || '';
-      // Remove trailing slash if present
-      if (baseUrl.endsWith('/')) {
-        baseUrl = baseUrl.slice(0, -1);
-      }
-      
-      // If we are on Vercel and VITE_API_URL is empty, this will fail because it tries to fetch from Vercel's domain
-      // We should warn the user if VITE_API_URL is missing but we are not on localhost
-      if (!baseUrl && !window.location.hostname.includes('localhost') && !window.location.hostname.includes('run.app')) {
-        console.warn("VITE_API_URL is not set. API calls might fail if the backend is not hosted on the same domain.");
-      }
-
-      const fetchUrl = `${baseUrl}/api/auth/url?userId=${auth.currentUser.uid}`;
+      const fetchUrl = getApiUrl(`/api/auth/url?userId=${auth.currentUser.uid}`);
       console.log("Fetching OAuth URL from:", fetchUrl);
       
       const response = await fetch(fetchUrl);
@@ -174,10 +162,7 @@ export default function Settings() {
     setIsSyncing(true);
     setApiError(null);
     try {
-      let baseUrl = import.meta.env.VITE_API_URL || '';
-      if (baseUrl.endsWith('/')) baseUrl = baseUrl.slice(0, -1);
-      
-      const response = await fetch(`${baseUrl}/api/blogs?userId=${auth.currentUser.uid}`);
+      const response = await fetch(getApiUrl(`/api/blogs?userId=${auth.currentUser.uid}`));
       const data = await response.json();
       
       if (!response.ok) {

@@ -341,7 +341,7 @@ export default function Home() {
       {/* Footer-like simple line */}
       <footer className="py-12 border-t border-border">
         <div className="container mx-auto px-4 text-center text-muted-foreground">
-          <p>© {new Date().getFullYear()} Avbora. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} AI Vision Beyond. All rights reserved.</p>
         </div>
       </footer>
     </div>

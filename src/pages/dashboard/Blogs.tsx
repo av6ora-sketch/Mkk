@@ -6,6 +6,7 @@ import { Button } from "../../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 import { Loader2, ExternalLink, RefreshCw, Plus } from "lucide-react";
 import { handleFirestoreError, OperationType } from "../../lib/firestore-error";
+import { getApiUrl } from "../../lib/utils";
 
 interface Blog {
   id: string;
@@ -68,7 +69,7 @@ export default function Blogs() {
     if (!auth.currentUser) return;
     setIsConnecting(true);
     try {
-      const response = await fetch('/api/auth/url');
+      const response = await fetch(getApiUrl('/api/auth/url'));
       const { url } = await response.json();
       
       // Open OAuth popup with userId in state
@@ -85,7 +86,7 @@ export default function Blogs() {
     if (!auth.currentUser) return;
     setIsLoading(true);
     try {
-      const response = await fetch(`/api/blogs?userId=${auth.currentUser.uid}`);
+      const response = await fetch(getApiUrl(`/api/blogs?userId=${auth.currentUser.uid}`));
       const data = await response.json();
       
       if (!response.ok) {
